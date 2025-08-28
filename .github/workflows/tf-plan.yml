@@ -6,6 +6,7 @@ on:
       - 'environments/dev/**'
       - 'modules/**'
       - '.github/workflows/**'
+  workflow_dispatch: {}
 
 permissions:
   id-token: write   # <- OBLIGATORIO para OIDC
