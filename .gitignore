@@ -1,0 +1,18 @@
+# Terraform
+*.tfstate
+*.tfstate.*
+*.tfvars          # si contienen datos sensibles (ej: passwords, keys)
+*.backup
+*.log
+
+# Directorio local de terraform init
+.terraform/
+.terraform.lock.hcl
+
+# Archivos temporales
+.DS_Store
+Thumbs.db
+
+# IDE / OS configs
+.vscode/
+.idea/

@@ -1,0 +1,42 @@
+name: tf-plan (dev)
+
+on:
+  pull_request:
+    paths:
+      - 'environments/dev/**'
+      - 'modules/**'
+      - '.github/workflows/**'
+
+permissions:
+  id-token: write   # <- OBLIGATORIO para OIDC
+  contents: read
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: us-east-1   # ajusta región
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.6
+
+      - name: Configure AWS creds via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::<TU_ACCOUNT_ID>:role/gha-terraform-dev
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: gha-tf-plan
+
+      - name: WhoAmI
+        run: aws sts get-caller-identity
+
+      - name: Terraform init/validate/plan
+        working-directory: environments/dev
+        run: |
+          terraform init -upgrade
+          terraform fmt -check
+          terraform validate
+          terraform plan -input=false -out=tfplan
