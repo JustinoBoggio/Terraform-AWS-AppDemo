@@ -40,15 +40,14 @@ jobs:
         id: idtoken
         with:
             script: |
-                const core = require('@actions/core');
-                const t = await core.getIDToken('sts.amazonaws.com');
-                core.setOutput('token', t);
+                const token = await core.getIDToken('sts.amazonaws.com');
+                core.setOutput('token', token);
 
       - name: Inspect OIDC JWT claims
         run: |
-            TOKEN='${{ steps.idtoken.outputs.token }}'
-            IFS='.' read -r h p s <<< "$TOKEN"
-            echo "$p" | base64 -d 2>/dev/null | jq .
+                TOKEN='${{ steps.idtoken.outputs.token }}'
+                PAYLOAD=$(echo "$TOKEN" | cut -d '.' -f2 | base64 -d 2>/dev/null || echo "$TOKEN" | cut -d '.' -f2 | base64 --decode)
+                echo "$PAYLOAD" | jq .
 
       - name: Configure AWS creds via OIDC
         uses: aws-actions/configure-aws-credentials@v4
