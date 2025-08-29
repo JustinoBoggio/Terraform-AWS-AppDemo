@@ -69,7 +69,7 @@ module "iam_oidc_github_app" {
   allowed_refs = ["refs/heads/main", "refs/tags/*"]
   role_name    = "gha-app-dev"
 
-  policy_arns  = []  # la policy la adjuntamos abajo
+  policy_arns = [] # la policy la adjuntamos abajo
   tags = {
     Project     = "devops-lab"
     Environment = "dev"
@@ -83,8 +83,8 @@ data "aws_caller_identity" "this" {}
 data "aws_iam_policy_document" "ecr_push_min" {
   # Necesario para login a ECR
   statement {
-    effect  = "Allow"
-    actions = ["ecr:GetAuthorizationToken"]
+    effect    = "Allow"
+    actions   = ["ecr:GetAuthorizationToken"]
     resources = ["*"]
   }
 
