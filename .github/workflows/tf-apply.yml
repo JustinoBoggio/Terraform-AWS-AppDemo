@@ -1,12 +1,12 @@
 name: tf-apply (dev)
 
 on:
-  push:
-    branches: [ "main" ]
-    paths:
-      - 'environments/dev/**'
-      - 'modules/**'
-      - '.github/workflows/**'
+#  push:
+#    branches: [ "main" ]
+#    paths:
+#      - 'environments/dev/**'
+#      - 'modules/**'
+#      - '.github/workflows/**'
   workflow_dispatch: {}
 
 permissions:
