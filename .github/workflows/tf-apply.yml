@@ -1,33 +1,39 @@
 name: tf-apply (dev)
 
 on:
-#  push:
-#    branches: [ "main" ]
-#    paths:
-#      - 'environments/dev/**'
-#      - 'modules/**'
-#      - '.github/workflows/**'
-  workflow_dispatch: {}
+    push:
+        branches: [ "main" ]
+        paths:
+        - 'environments/dev/**'
+        - 'modules/**'
+        - '.github/workflows/**'
+    workflow_dispatch: {}
 
 permissions:
-  id-token: write
-  contents: read
+    id-token: write
+    contents: read
 
 jobs:
   apply:
     runs-on: ubuntu-latest
-    environment: dev           # usa GitHub Environments para approval manual (Settings → Environments → dev)
+    environment: dev # usa GitHub Environments para approval manual (Settings → Environments → dev)
     concurrency:
       group: tf-apply-dev
       cancel-in-progress: false
     env:
-      AWS_REGION: us-east-1    # ajusta región
+      AWS_REGION: us-east-1 # ajusta región
     steps:
       - uses: actions/checkout@v4
 
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.9.x
+
+      - name: Debug GitHub context
+        run: |
+            echo "repository=${{ github.repository }}"
+            echo "ref=${{ github.ref }}"
+            echo "event=${{ github.event_name }}"
 
       - name: Configure AWS creds via OIDC
         uses: aws-actions/configure-aws-credentials@v4
