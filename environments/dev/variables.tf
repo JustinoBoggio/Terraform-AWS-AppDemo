@@ -6,6 +6,6 @@ variable "aws_region" {
 
 variable "aws_profile" {
   type        = string
-  default     = ""   # vacío en CI; en local podés setear tf-admin
+  default     = "" # vacío en CI; en local podés setear tf-admin
   description = "Optional named profile for local use"
 }
