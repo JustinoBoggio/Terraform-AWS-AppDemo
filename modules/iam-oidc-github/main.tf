@@ -48,6 +48,16 @@ data "aws_iam_policy_document" "assume_role" {
       variable = "token.actions.githubusercontent.com:sub"
       values   = local.sub_patterns
     }
+    condition {
+      test     = "StringLike"
+      variable = "token.actions.githubusercontent.com:sub"
+      values = [
+        "repo:${var.github_owner}/${var.github_repo}:ref:refs/heads/main",
+        "repo:${var.github_owner}/${var.github_repo}:ref:refs/pull/*/merge",
+        "repo:${var.github_owner}/${var.github_repo}:ref:refs/tags/*",
+        "repo:${var.github_owner}/${var.github_repo}:environment:dev"  # <--- NUEVO
+      ]
+    }
   }
 }
 
