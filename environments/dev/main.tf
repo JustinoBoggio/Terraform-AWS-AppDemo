@@ -21,6 +21,8 @@ module "vpc" {
 module "iam_oidc_github" {
   source = "../../modules/iam-oidc-github"
 
+  create_provider = true
+
   github_owner = "JustinoBoggio"
   github_repo  = "Terraform-AWS-AppDemo"
 
@@ -29,7 +31,10 @@ module "iam_oidc_github" {
 
   role_name = "gha-terraform-dev"
   # Por ahora, para acelerar dev, usamos PowerUserAccess. Luego endurecemos.
-  policy_arns = ["arn:aws:iam::aws:policy/PowerUserAccess"]
+  policy_arns = [
+    "arn:aws:iam::aws:policy/PowerUserAccess",
+    "arn:aws:iam::aws:policy/IAMReadOnlyAccess"
+  ]
 
   tags = {
     Project     = "devops-lab"

@@ -12,6 +12,9 @@ resource "aws_iam_openid_connect_provider" "github" {
   tags           = var.tags
   # Desde las versiones recientes del provider AWS, ya no es necesario setear thumbprint_list manualmente.
   # Referencia: Terraform Registry indica que si no se provee, IAM lo resuelve automáticamente.
+  lifecycle {
+  prevent_destroy = true
+  }
 }
 
 data "aws_iam_openid_connect_provider" "github" {
