@@ -19,15 +19,15 @@ module "vpc" {
 }
 
 module "iam_oidc_github" {
-  source       = "../../modules/iam-oidc-github"
+  source = "../../modules/iam-oidc-github"
 
-  github_owner = "TU_OWNER_GH"
-  github_repo  = "TU_REPO_GH"
+  github_owner = "JustinoBoggio"
+  github_repo  = "Terraform-AWS-AppDemo"
 
   # Permitimos plan en PRs y apply en main
   allowed_refs = ["refs/heads/main", "refs/pull/*/merge"]
 
-  role_name   = "gha-terraform-dev"
+  role_name = "gha-terraform-dev"
   # Por ahora, para acelerar dev, usamos PowerUserAccess. Luego endurecemos.
   policy_arns = ["arn:aws:iam::aws:policy/PowerUserAccess"]
 
