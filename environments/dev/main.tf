@@ -42,3 +42,77 @@ module "iam_oidc_github" {
     Owner       = "justino"
   }
 }
+
+module "ecr" {
+  source = "../../modules/ecr"
+
+  repo_names          = ["app-api", "app-web"]
+  scan_on_push        = true
+  immutability        = "IMMUTABLE"
+  lifecycle_keep_last = 20
+
+  tags = {
+    Project     = "devops-lab"
+    Environment = "dev"
+    Owner       = "justino"
+  }
+}
+
+
+# Role OIDC para la app (build/push)
+module "iam_oidc_github_app" {
+  source          = "../../modules/iam-oidc-github"
+  create_provider = false
+
+  github_owner = "JustinoBoggio"
+  github_repo  = "Terraform-AWS-AppDemo"
+  allowed_refs = ["refs/heads/main", "refs/tags/*"]
+  role_name    = "gha-app-dev"
+
+  policy_arns  = []  # la policy la adjuntamos abajo
+  tags = {
+    Project     = "devops-lab"
+    Environment = "dev"
+    Owner       = "justino"
+  }
+}
+
+data "aws_caller_identity" "this" {}
+
+# Policy mínima para ECR push/pull estricta a TUS repos del módulo ecr
+data "aws_iam_policy_document" "ecr_push_min" {
+  # Necesario para login a ECR
+  statement {
+    effect  = "Allow"
+    actions = ["ecr:GetAuthorizationToken"]
+    resources = ["*"]
+  }
+
+  # Push/Pull sobre tus repositorios concretos
+  statement {
+    effect = "Allow"
+    actions = [
+      "ecr:BatchCheckLayerAvailability",
+      "ecr:CompleteLayerUpload",
+      "ecr:UploadLayerPart",
+      "ecr:InitiateLayerUpload",
+      "ecr:PutImage",
+      "ecr:BatchGetImage",
+      "ecr:GetDownloadUrlForLayer",
+      "ecr:DescribeRepositories"
+    ]
+    resources = [
+      for name, repo in module.ecr.repositories : repo.arn
+    ]
+  }
+}
+
+resource "aws_iam_policy" "ecr_push_min" {
+  name   = "gha-ecr-push-min"
+  policy = data.aws_iam_policy_document.ecr_push_min.json
+}
+
+resource "aws_iam_role_policy_attachment" "gha_app_ecr_attach" {
+  role       = module.iam_oidc_github_app.role_name
+  policy_arn = aws_iam_policy.ecr_push_min.arn
+}
