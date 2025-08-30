@@ -189,8 +189,17 @@ module "eks" {
   }
   access_entries = {
     gha-app = {
-      kubernetes_groups = ["system:masters"] # admin total en dev
-      principal_arn     = module.iam_oidc_github_app.role_arn
+      principal_arn = module.iam_oidc_github_app.role_arn
+
+      # Otorga permisos de admin a nivel CLUSTER
+      policy_associations = {
+        admin = {
+          policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+          access_scope = {
+            type = "cluster"
+          }
+        }
+      }
     }
   }
 
