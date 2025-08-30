@@ -1,19 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: app
+  name: {{ .Release.Name }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      app: app
+      app.kubernetes.io/name: {{ .Release.Name }}
   template:
     metadata:
       labels:
-        app: app
+        app.kubernetes.io/name: {{ .Release.Name }}
     spec:
       containers:
-        - name: app
+        - name: {{ .Release.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
