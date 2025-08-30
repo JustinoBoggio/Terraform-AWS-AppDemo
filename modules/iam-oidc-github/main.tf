@@ -53,7 +53,7 @@ data "aws_iam_policy_document" "assume_role" {
         "repo:${var.github_owner}/${var.github_repo}:ref:refs/pull/*/head",
         "repo:${var.github_owner}/${var.github_repo}:ref:refs/tags/*",
         "repo:${var.github_owner}/${var.github_repo}:ref:refs/heads/gh-readonly-queue/*",
-        # environment - main branch
+        "repo:${var.github_owner}/${var.github_repo}:pull_request" ,
         "repo:${var.github_owner}/${var.github_repo}:environment:dev"
       ]
     }
