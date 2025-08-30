@@ -33,7 +33,8 @@ module "iam_oidc_github" {
   # Por ahora, para acelerar dev, usamos PowerUserAccess. Luego endurecemos.
   policy_arns = [
     "arn:aws:iam::aws:policy/PowerUserAccess",
-    "arn:aws:iam::aws:policy/IAMReadOnlyAccess"
+    "arn:aws:iam::aws:policy/IAMReadOnlyAccess",
+    "arn:aws:iam::aws:policy/IAMFullAccess" # <- temporal para crear roles/adjuntar policies/PassRole
   ]
 
   tags = {
@@ -115,4 +116,53 @@ resource "aws_iam_policy" "ecr_push_min" {
 resource "aws_iam_role_policy_attachment" "gha_app_ecr_attach" {
   role       = module.iam_oidc_github_app.role_name
   policy_arn = aws_iam_policy.ecr_push_min.arn
+}
+
+
+module "eks" {
+  source  = "terraform-aws-modules/eks/aws"
+  version = "20.24.1"  # fíjalo; luego bump controlado
+
+  cluster_name    = "dev-eks"
+  cluster_version = "1.30"
+
+  # Networking (de tu módulo VPC)
+  vpc_id     = module.vpc.vpc_id
+  subnet_ids = concat(module.vpc.private_subnet_ids, module.vpc.public_subnet_ids)
+
+  cluster_endpoint_public_access  = true
+  cluster_endpoint_private_access = false
+  cluster_endpoint_public_access_cidrs = ["0.0.0.0/0"] # en dev; luego tu IP /32
+
+  enable_irsa = true
+
+  # Logs de control plane (baratos y útiles)
+  cluster_enabled_log_types = ["api", "audit", "authenticator"]
+
+  # Node group Spot barato (t3.small). Ajusta a ARM si te conviene (t4g.small)
+  eks_managed_node_groups = {
+    dev = {
+      instance_types = ["t3.small"]
+      capacity_type  = "SPOT"
+
+      min_size     = 0
+      desired_size = 1
+      max_size     = 2
+      disk_size    = 20
+
+      subnet_ids = module.vpc.private_subnet_ids
+      labels = {
+        env = "dev"
+      }
+      tags = {
+        Name = "dev-ng"
+      }
+    }
+  }
+
+  tags = {
+    Project     = "devops-lab"
+    Environment = "dev"
+    Owner       = "justino"
+  }
 }
