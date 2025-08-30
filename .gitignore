@@ -4,6 +4,9 @@
 *.tfvars          # si contienen datos sensibles (ej: passwords, keys)
 *.backup
 *.log
+!terraform.tfvars.example
+crash.log
+crash.*.log
 
 # Directorio local de terraform init
 .terraform/
@@ -16,3 +19,14 @@ Thumbs.db
 # IDE / OS configs
 .vscode/
 .idea/
+Thumbs.db
+
+# --- Node/React (app) ---
+app/**/node_modules/
+app/**/npm-debug.log
+app/web/dist/
+app/web/.vite/
+app/**/.DS_Store
+
+# --- Docker ---
+**/.dockerignore
