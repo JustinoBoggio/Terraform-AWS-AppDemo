@@ -46,19 +46,15 @@ data "aws_iam_policy_document" "assume_role" {
     condition {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = local.sub_patterns
-    }
-    condition {
-      test     = "StringLike"
-      variable = "token.actions.githubusercontent.com:sub"
       values = [
-        "repo:${var.github_owner}/${var.github_repo}:ref:refs/heads/main",      # rama main
-        "repo:${var.github_owner}/${var.github_repo}:ref:refs/heads/*",         # ramas feature/*
-        "repo:${var.github_owner}/${var.github_repo}:ref:refs/pull/*/merge",    # PR común
-        "repo:${var.github_owner}/${var.github_repo}:ref:refs/pull/*/head",     # PR head (algunas acciones)
-        "repo:${var.github_owner}/${var.github_repo}:ref:refs/tags/*",          # releases
-        "repo:${var.github_owner}/${var.github_repo}:ref:refs/heads/gh-readonly-queue/*", # cola de lectura gh 
-        "repo:${var.github_owner}/${var.github_repo}:environment:dev"  # entorno dev en main
+        "repo:${var.github_owner}/${var.github_repo}:ref:refs/heads/main",
+        "repo:${var.github_owner}/${var.github_repo}:ref:refs/heads/*",
+        "repo:${var.github_owner}/${var.github_repo}:ref:refs/pull/*/merge",
+        "repo:${var.github_owner}/${var.github_repo}:ref:refs/pull/*/head",
+        "repo:${var.github_owner}/${var.github_repo}:ref:refs/tags/*",
+        "repo:${var.github_owner}/${var.github_repo}:ref:refs/heads/gh-readonly-queue/*",
+        # environment - main branch
+        "repo:${var.github_owner}/${var.github_repo}:environment:dev"
       ]
     }
   }
