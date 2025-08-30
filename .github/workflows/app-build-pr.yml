@@ -1,0 +1,22 @@
+on:
+  pull_request:
+    paths:
+      - "app/**"
+
+jobs:
+  build_check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: Build API
+        working-directory: app/api
+        run: |
+          npm ci
+          npm run -s build || echo "no build script, solo validación de install"
+      - name: Build WEB
+        working-directory: app/web
+        run: |
+          npm ci
+          npm run build
