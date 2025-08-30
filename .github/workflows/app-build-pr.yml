@@ -1,3 +1,5 @@
+name: app-build-pr
+
 on:
   pull_request:
     paths:

@@ -1,0 +1,20 @@
+namespace: app
+replicaCount: 1
+
+image:
+  repository: ""            # se inyecta desde el workflow (ECR URL)
+  tag: "latest"             # se inyecta con el SHA
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 3000          # ajusta a tu app (Node/React/nginx)
+
+resources:
+  requests:
+    cpu: "50m"
+    memory: "128Mi"
+  limits:
+    cpu: "200m"
+    memory: "256Mi"

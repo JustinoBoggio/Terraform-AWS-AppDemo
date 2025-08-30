@@ -107,6 +107,8 @@ data "aws_iam_policy_document" "ecr_push_min" {
       "ecr:InitiateLayerUpload",
       "ecr:PutImage",
       "ecr:BatchGetImage",
+      "ecr:DescribeImages",
+      "ecr:ListImages",
       "ecr:GetDownloadUrlForLayer",
       "ecr:DescribeRepositories"
     ]
@@ -124,6 +126,24 @@ resource "aws_iam_policy" "ecr_push_min" {
 resource "aws_iam_role_policy_attachment" "gha_app_ecr_attach" {
   role       = module.iam_oidc_github_app.role_name
   policy_arn = aws_iam_policy.ecr_push_min.arn
+}
+
+data "aws_iam_policy_document" "eks_describe_cluster" {
+  statement {
+    effect    = "Allow"
+    actions   = ["eks:DescribeCluster"]
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_policy" "eks_describe_cluster" {
+  name   = "gha-eks-describe-cluster"
+  policy = data.aws_iam_policy_document.eks_describe_cluster.json
+}
+
+resource "aws_iam_role_policy_attachment" "gha_app_eks_attach" {
+  role       = module.iam_oidc_github_app.role_name
+  policy_arn = aws_iam_policy.eks_describe_cluster.arn
 }
 
 
@@ -165,6 +185,12 @@ module "eks" {
       tags = {
         Name = "dev-ng"
       }
+    }
+  }
+  access_entries = {
+    gha-app = {
+      kubernetes_groups = ["system:masters"] # admin total en dev
+      principal_arn     = module.iam_oidc_github_app.role_arn
     }
   }
 
