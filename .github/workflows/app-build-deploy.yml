@@ -33,22 +33,30 @@ jobs:
       - name: Login to ECR
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build & Push images (api & web)
+      - name: Build & Push Api image
         env:
           SHA: ${{ github.sha }}
           REG: ${{ env.AWS_REGION }}
           ACC: ${{ steps.acct.outputs.id }}
         run: |
           API_REPO="$ACC.dkr.ecr.$REG.amazonaws.com/app-api"
-          WEB_REPO="$ACC.dkr.ecr.$REG.amazonaws.com/app-web"
 
           docker build -t "$API_REPO:$SHA" app/api
           docker push "$API_REPO:$SHA"
 
+          echo "API_IMAGE=$API_REPO:$SHA" >> $GITHUB_ENV
+
+      - name: Build & Push images Web image
+        env:
+          SHA: ${{ github.sha }}
+          REG: ${{ env.AWS_REGION }}
+          ACC: ${{ steps.acct.outputs.id }}
+        run: |
+          WEB_REPO="$ACC.dkr.ecr.$REG.amazonaws.com/app-web"
+
           docker build -t "$WEB_REPO:$SHA" app/web
           docker push "$WEB_REPO:$SHA"
 
-          echo "API_IMAGE=$API_REPO:$SHA" >> $GITHUB_ENV
           echo "WEB_IMAGE=$WEB_REPO:$SHA" >> $GITHUB_ENV
 
       - name: Install kubectl & helm
@@ -60,6 +68,14 @@ jobs:
       - name: Update kubeconfig
         run: aws eks update-kubeconfig --name "${{ env.EKS_CLUSTER }}" --region "${{ env.AWS_REGION }}"
 
+      - name: Show chart files
+        run: |
+            ls -la app/deploy/chart
+            find app/deploy/chart -maxdepth 2 -type f -print
+
+      - name: Helm lint
+        run: helm lint app/deploy/chart
+
       - name: Deploy with Helm (api)
         run: |
             REPO="${API_IMAGE%:*}"
@@ -68,6 +84,7 @@ jobs:
             --namespace "${NS}" --create-namespace \
             --set image.repository="${REPO}" \
             --set image.tag="${TAG}" \
+            --set service.port=3000 \
             --set service.targetPort=3000
 
       - name: Deploy with Helm (web)
@@ -78,4 +95,5 @@ jobs:
             --namespace "${NS}" \
             --set image.repository="${REPO}" \
             --set image.tag="${TAG}" \
+            --set service.port=80 \
             --set service.targetPort=80
