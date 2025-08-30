@@ -46,7 +46,7 @@ jobs:
 
           echo "API_IMAGE=$API_REPO:$SHA" >> $GITHUB_ENV
 
-      - name: Build & Push images Web image
+      - name: Build & Push Web image
         env:
           SHA: ${{ github.sha }}
           REG: ${{ env.AWS_REGION }}
