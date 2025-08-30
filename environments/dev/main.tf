@@ -28,13 +28,13 @@ module "iam_oidc_github" {
 
   # Permitimos plan en PRs y apply en main
   allowed_refs = [
-    "refs/heads/main",                      # push / workflow_dispatch en main
-    "refs/heads/*",                         # ramas feature/*
-    "refs/pull/*/merge",                    # PR común
-    "refs/pull/*/head",                     # PR con head (algunas acciones)
-    "refs/tags/*",                          # releases
-    "environment:dev",                      # entorno dev en main                          
-    "refs/heads/gh-readonly-queue/*"        # merge queue (si lo usás)
+    "refs/heads/main",               # push / workflow_dispatch en main
+    "refs/heads/*",                  # ramas feature/*
+    "refs/pull/*/merge",             # PR común
+    "refs/pull/*/head",              # PR con head (algunas acciones)
+    "refs/tags/*",                   # releases
+    "environment:dev",               # entorno dev en main                          
+    "refs/heads/gh-readonly-queue/*" # merge queue (si lo usás)
   ]
 
   role_name = "gha-terraform-dev"
@@ -129,7 +129,7 @@ resource "aws_iam_role_policy_attachment" "gha_app_ecr_attach" {
 
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "20.24.1"  # fíjalo; luego bump controlado
+  version = "20.24.1" # fíjalo; luego bump controlado
 
   cluster_name    = "dev-eks"
   cluster_version = "1.30"
@@ -138,8 +138,8 @@ module "eks" {
   vpc_id     = module.vpc.vpc_id
   subnet_ids = concat(module.vpc.private_subnet_ids, module.vpc.public_subnet_ids)
 
-  cluster_endpoint_public_access  = true
-  cluster_endpoint_private_access = false
+  cluster_endpoint_public_access       = true
+  cluster_endpoint_private_access      = false
   cluster_endpoint_public_access_cidrs = ["0.0.0.0/0"] # en dev; luego tu IP /32
 
   enable_irsa = true

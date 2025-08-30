@@ -5,7 +5,7 @@ output "gha_role_arn" {
 
 output "ecr_repositories" {
   description = "Repos ECR creados"
-  value = module.ecr.repositories
+  value       = module.ecr.repositories
 }
 
 output "gha_app_role_arn" {
