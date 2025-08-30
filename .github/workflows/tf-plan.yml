@@ -30,19 +30,19 @@ jobs:
           echo "ref=${{ github.ref }}"
           echo "repo=${{ github.repository }}"
 
-      - name: Inspect OIDC claims (safe)
-        shell: bash
+      - uses: actions/github-script@v7
+        id: idtoken
+        with:
+            script: |
+                const token = await core.getIDToken('sts.amazonaws.com');
+                core.setOutput('token', token);
+
+      - name: Inspect OIDC JWT claims
         run: |
-          echo "::group::Fetch OIDC token"
-          TOK=$(curl -sLS -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
-            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com" | jq -r '.value')
-          echo "::endgroup::"
-          SUB=$(echo "$TOK" | cut -d '.' -f2 | base64 -d 2>/dev/null | jq -r .sub)
-          AUD=$(echo "$TOK" | cut -d '.' -f2 | base64 -d 2>/dev/null | jq -r .aud)
-          echo "oidc.sub=$SUB"
-          echo "oidc.aud=$AUD"
-          echo "gh.ref=${{ github.ref }}"
-          echo "gh.repository=${{ github.repository }}"
+                TOKEN='${{ steps.idtoken.outputs.token }}'
+                PAYLOAD=$(echo "$TOKEN" | cut -d '.' -f2 | base64 -d 2>/dev/null || echo "$TOKEN" | cut -d '.' -f2 | base64 --decode)
+                echo "$PAYLOAD" | jq .
+
 
       - name: Configure AWS creds via OIDC
         uses: aws-actions/configure-aws-credentials@v4
