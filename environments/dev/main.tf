@@ -27,7 +27,15 @@ module "iam_oidc_github" {
   github_repo  = "Terraform-AWS-AppDemo"
 
   # Permitimos plan en PRs y apply en main
-  allowed_refs = ["refs/heads/main", "refs/pull/*/merge"]
+  allowed_refs = [
+    "refs/heads/main",                      # push / workflow_dispatch en main
+    "refs/heads/*",                         # ramas feature/*
+    "refs/pull/*/merge",                    # PR común
+    "refs/pull/*/head",                     # PR con head (algunas acciones)
+    "refs/tags/*",                          # releases
+    "environment:dev",                      # entorno dev en main                          
+    "refs/heads/gh-readonly-queue/*"        # merge queue (si lo usás)
+  ]
 
   role_name = "gha-terraform-dev"
   # Por ahora, para acelerar dev, usamos PowerUserAccess. Luego endurecemos.
