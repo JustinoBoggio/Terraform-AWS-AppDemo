@@ -24,6 +24,66 @@ jobs:
         with:
           terraform_version: 1.9.x
 
+      - name: Debug GH context
+        run: |
+          echo "event=${{ github.event_name }}"
+          echo "ref=${{ github.ref }}"
+          echo "repo=${{ github.repository }}"
+
+      - name: Inspect OIDC claims (safe)
+        shell: bash
+        run: |
+          set -uo pipefail
+          # jq puede no estar en todas las imágenes:
+          if ! command -v jq >/dev/null 2>&1; then
+            sudo apt-get update -y && sudo apt-get install -y jq
+          fi
+
+          echo "::group::Fetch OIDC token"
+          # Llamada al endpoint de ID token
+          HTTP_STATUS=$(curl -sS -w "%{http_code}" -o /tmp/oidc.json \
+            -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com" || true)
+          echo "HTTP_STATUS=$HTTP_STATUS"
+          cat /tmp/oidc.json || true
+          echo "::endgroup::"
+
+          # Extraer el token (si vino)
+          TOK=$(jq -r '.value // empty' /tmp/oidc.json 2>/dev/null || true)
+          if [ -z "${TOK:-}" ]; then
+            echo "No OIDC token returned. (¿PR desde fork? ¿permissions id-token: write?)"
+            echo "gh.event=${{ github.event_name }}"
+            echo "gh.ref=${{ github.ref }}"
+            echo "gh.repository=${{ github.repository }}"
+            exit 0
+          fi
+
+          PAYLOAD_B64=$(echo "$TOK" | cut -d '.' -f2 || true)
+          if [ -z "${PAYLOAD_B64:-}" ]; then
+            echo "Token without payload part."
+            exit 0
+          fi
+
+          # Decodificar payload de forma segura (algunas shells necesitan --ignore-garbage)
+          if base64 --help 2>&1 | grep -q -- '--decode'; then
+            PAYLOAD_JSON=$(echo "$PAYLOAD_B64" | base64 --decode 2>/dev/null || true)
+          else
+            PAYLOAD_JSON=$(echo "$PAYLOAD_B64" | base64 -d 2>/dev/null || true)
+          fi
+
+          if [ -z "${PAYLOAD_JSON:-}" ]; then
+            echo "Failed to decode token payload."
+            exit 0
+          fi
+
+          SUB=$(echo "$PAYLOAD_JSON" | jq -r '.sub // empty' 2>/dev/null || true)
+          AUD=$(echo "$PAYLOAD_JSON" | jq -r '.aud // empty' 2>/dev/null || true)
+
+          echo "oidc.sub=${SUB:-<empty>}"
+          echo "oidc.aud=${AUD:-<empty>}"
+          echo "gh.ref=${{ github.ref }}"
+          echo "gh.repository=${{ github.repository }}"
+
       - name: Configure AWS creds via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:

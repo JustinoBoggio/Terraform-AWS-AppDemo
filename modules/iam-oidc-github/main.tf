@@ -46,16 +46,15 @@ data "aws_iam_policy_document" "assume_role" {
     condition {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = local.sub_patterns
-    }
-    condition {
-      test     = "StringLike"
-      variable = "token.actions.githubusercontent.com:sub"
       values = [
         "repo:${var.github_owner}/${var.github_repo}:ref:refs/heads/main",
+        "repo:${var.github_owner}/${var.github_repo}:ref:refs/heads/*",
         "repo:${var.github_owner}/${var.github_repo}:ref:refs/pull/*/merge",
+        "repo:${var.github_owner}/${var.github_repo}:ref:refs/pull/*/head",
         "repo:${var.github_owner}/${var.github_repo}:ref:refs/tags/*",
-        "repo:${var.github_owner}/${var.github_repo}:environment:dev"  # <--- NUEVO
+        "repo:${var.github_owner}/${var.github_repo}:ref:refs/heads/gh-readonly-queue/*",
+        "repo:${var.github_owner}/${var.github_repo}:pull_request" ,
+        "repo:${var.github_owner}/${var.github_repo}:environment:dev"
       ]
     }
   }
