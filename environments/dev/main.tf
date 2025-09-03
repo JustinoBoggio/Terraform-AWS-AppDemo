@@ -219,3 +219,78 @@ module "eks" {
     Owner       = "justino"
   }
 }
+
+module "s3_app" {
+  source = "../../modules/s3-app-bucket"
+
+  name          = "justi-app-dev-${data.aws_caller_identity.this.account_id}"
+  force_destroy = true   # dev: para poder destruir sin vaciar a mano
+  versioning    = true
+
+  tags = {
+    Project     = "devops-lab"
+    Environment = "dev"
+    Owner       = "justino"
+  }
+}
+
+module "rds_postgres" {
+  source = "../../modules/rds-postgres"
+
+  db_name               = "appdb"
+  engine_version        = "15.8"
+  instance_class        = "db.t4g.micro"
+  allocated_storage_gb  = 20
+
+  subnet_ids            = module.vpc.private_subnet_ids
+  vpc_id                = module.vpc.vpc_id
+  allowed_sg_ids        = [module.eks.node_security_group_id]
+
+  backup_retention_days = 3
+  skip_final_snapshot   = true
+
+  tags = {
+    Project     = "devops-lab"
+    Environment = "dev"
+    Owner       = "justino"
+  }
+}
+
+resource "aws_secretsmanager_secret" "db" {
+  name = "dev/app/db"
+  tags = {
+    Project     = "devops-lab"
+    Environment = "dev"
+  }
+}
+
+resource "aws_secretsmanager_secret_version" "db" {
+  secret_id     = aws_secretsmanager_secret.db.id
+  secret_string = jsonencode({
+    host     = module.rds_postgres.endpoint
+    port     = module.rds_postgres.port
+    dbname   = "appdb"
+    username = module.rds_postgres.username
+    password = module.rds_postgres.password
+  })
+}
+
+module "irsa_app_api" {
+  source = "../../modules/iam-roles/api-irsa"
+
+  cluster_oidc_issuer_url = module.eks.cluster_oidc_issuer_url
+  oidc_provider_arn       = module.eks.oidc_provider_arn
+
+  k8s_namespace           = "app"
+  k8s_service_account     = "app-api"
+
+  secretsmanager_arns     = [aws_secretsmanager_secret.db.arn]
+  s3_bucket_arn           = module.s3_app.bucket_arn
+  s3_prefix               = "app/*"
+
+  tags = {
+    Project     = "devops-lab"
+    Environment = "dev"
+    Owner       = "justino"
+  }
+}
