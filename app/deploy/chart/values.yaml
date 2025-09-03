@@ -18,3 +18,10 @@ resources:
   limits:
     cpu: "200m"
     memory: "256Mi"
+
+serviceAccount:
+  create: true
+  name: ""        # si vacío: usa .Release.Name
+
+pod:
+  serviceAccountAnnotations: {}  # se setea en helm para API

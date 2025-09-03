@@ -46,7 +46,7 @@ jobs:
 
           echo "API_IMAGE=$API_REPO:$SHA" >> $GITHUB_ENV
 
-      - name: Build & Push images Web image
+      - name: Build & Push Web image
         env:
           SHA: ${{ github.sha }}
           REG: ${{ env.AWS_REGION }}
@@ -84,6 +84,9 @@ jobs:
             --namespace "${NS}" --create-namespace \
             --set image.repository="${REPO}" \
             --set image.tag="${TAG}" \
+            --set serviceAccount.create=true \
+            --set serviceAccount.name="app-api" \
+            --set pod.serviceAccountAnnotations."eks\.amazonaws\.com/role-arn"="${IRSA_ROLE_ARN_API}" \
             --set service.port=3000 \
             --set service.targetPort=3000
 
