@@ -1,35 +1,41 @@
 name: tf-apply (dev)
 
 on:
-    push:
-        branches: [ "main" ]
-        paths:
-        - 'environments/dev/**'
-        - 'modules/**'
-        - '.github/workflows/**'
-    workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths:
+      - 'environments/dev/**'
+      - 'modules/**'
+      - '.github/workflows/tf-apply.yml'
+  workflow_dispatch: {}
 
 permissions:
-    id-token: write
-    contents: read
+  id-token: write
+  contents: read
+
+concurrency:
+  group: tf-apply-main
+  cancel-in-progress: true
+
+env:
+  AWS_REGION: us-east-1
 
 jobs:
   apply:
+    environment: dev   # <- requiere aprobación en Settings → Environments
     runs-on: ubuntu-latest
-    environment: dev # usa GitHub Environments para approval manual (Settings → Environments → dev)
-    concurrency:
-      group: tf-apply-dev
-      cancel-in-progress: false
-    env:
-      AWS_REGION: us-east-1 # ajusta región
+    defaults:
+      run:
+        shell: bash
+        working-directory: environments/dev
+
     steps:
       - uses: actions/checkout@v4
 
       - uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.9.x
+        with: { terraform_version: 1.9.x }
 
-      - name: Configure AWS creds via OIDC
+      - name: AWS creds (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::215873709989:role/gha-terraform-dev
@@ -39,9 +45,8 @@ jobs:
       - name: WhoAmI
         run: aws sts get-caller-identity
 
-      - name: Terraform init/plan/apply
-        working-directory: environments/dev
-        run: |
-          terraform init -upgrade
-          terraform plan -lock-timeout=5m -input=false -out=tfplan
-          terraform apply -lock-timeout=5m -input=false -auto-approve tfplan
+      - name: Terraform init
+        run: terraform init -input=false
+
+      - name: Terraform apply
+        run: terraform apply -auto-approve -input=false

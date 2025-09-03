@@ -1,0 +1,26 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule: { interval: weekly }
+    labels: ["deps", "github-actions"]
+
+  - package-ecosystem: npm
+    directory: "/app/web"
+    schedule: { interval: weekly }
+    labels: ["deps", "npm"]
+
+  - package-ecosystem: npm
+    directory: "/app/api"
+    schedule: { interval: weekly }
+    labels: ["deps", "npm"]
+
+  - package-ecosystem: terraform
+    directory: "/environments/dev"
+    schedule: { interval: weekly }
+    labels: ["deps", "terraform"]
+
+  - package-ecosystem: docker
+    directory: "/app"
+    schedule: { interval: weekly }
+    labels: ["deps", "docker"]

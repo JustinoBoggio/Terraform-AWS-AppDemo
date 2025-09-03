@@ -1,0 +1,27 @@
+name: repo-checks
+
+on:
+  pull_request:
+    paths:
+      - '**/*.tf'
+      - '**/*.tfvars'
+      - '**/*.yaml'
+      - '**/*.yml'
+      - 'app/**'
+      - '.pre-commit-config.yaml'
+      - '.github/workflows/checks.yml'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  precommit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+      - name: Install pre-commit
+        run: pip install pre-commit
+      - name: Run pre-commit on diff
+        run: pre-commit run --all-files
