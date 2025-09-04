@@ -1,24 +1,48 @@
-name: app-build-pr
+name: app-build (PR)
 
 on:
   pull_request:
     paths:
-      - "app/**"
+      - 'app/**'
+      - '.github/workflows/app-build-pr.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: app-build-pr-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build_check:
+  build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        part: [api, web]
+
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 20 }
-      - name: Build API
-        working-directory: app/api
-        run: |
-          npm ci
-          npm run -s build || echo "no build script, solo validación de install"
-      - name: Build WEB
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install & Build (web)
+        if: matrix.part == 'web'
         working-directory: app/web
         run: |
           npm ci
           npm run build
+
+      - name: Install (api)
+        if: matrix.part == 'api'
+        working-directory: app/api
+        run: npm ci
+
+      - name: Lint Dockerfile (hadolint)
+        if: matrix.part == 'api' || matrix.part == 'web'
+        run: |
+          curl -sL https://github.com/hadolint/hadolint/releases/download/v2.12.0/hadolint-Linux-x86_64 -o /usr/local/bin/hadolint
+          chmod +x /usr/local/bin/hadolint
+          hadolint app/${{ matrix.part }}/Dockerfile

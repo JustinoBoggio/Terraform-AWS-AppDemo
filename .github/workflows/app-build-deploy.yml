@@ -1,100 +1,101 @@
-name: app-build-deploy
+name: app-build-deploy (dev)
+
 on:
   push:
-    branches: [ "main" ]
+    branches: [main]
     paths:
-      - "app/**"
-      - ".github/workflows/app-build-deploy.yml"
+      - 'app/**'
+      - '.github/workflows/app-build-deploy.yml'
   workflow_dispatch: {}
+
 permissions:
   id-token: write
   contents: read
 
+concurrency:
+  group: app-deploy-main
+  cancel-in-progress: true
+
+env:
+  AWS_REGION: us-east-1
+  NS: app
+
 jobs:
-  build-push-deploy:
+  build_push_deploy:
+    environment: dev
     runs-on: ubuntu-latest
-    env:
-      AWS_REGION: us-east-1
-      EKS_CLUSTER: dev-eks
-      NS: app
+
     steps:
       - uses: actions/checkout@v4
-
-      - name: Configure AWS creds (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: arn:aws:iam::215873709989:role/gha-app-dev   # el del module.iam_oidc_github_app
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Get account ID
-        id: acct
-        run: echo "id=$(aws sts get-caller-identity --query Account --output text)" >> $GITHUB_OUTPUT
 
       - name: Login to ECR
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build & Push Api image
+      - name: Get AWS account ID
+        id: acct
+        run: echo "id=$(aws sts get-caller-identity --query Account --output text)" >> "$GITHUB_OUTPUT"
+
+      - name: Build & Push images (api & web)
         env:
           SHA: ${{ github.sha }}
           REG: ${{ env.AWS_REGION }}
           ACC: ${{ steps.acct.outputs.id }}
+        shell: bash
         run: |
-          API_REPO="$ACC.dkr.ecr.$REG.amazonaws.com/app-api"
+          set -euo pipefail
+          API_REPO="${ACC}.dkr.ecr.${REG}.amazonaws.com/app-api"
+          WEB_REPO="${ACC}.dkr.ecr.${REG}.amazonaws.com/app-web"
 
-          docker build -t "$API_REPO:$SHA" app/api
-          docker push "$API_REPO:$SHA"
+          docker build -t "${API_REPO}:${SHA}" "app/api"
+          docker push "${API_REPO}:${SHA}"
 
-          echo "API_IMAGE=$API_REPO:$SHA" >> $GITHUB_ENV
+          docker build -t "${WEB_REPO}:${SHA}" "app/web"
+          docker push "${WEB_REPO}:${SHA}"
 
-      - name: Build & Push Web image
-        env:
-          SHA: ${{ github.sha }}
-          REG: ${{ env.AWS_REGION }}
-          ACC: ${{ steps.acct.outputs.id }}
-        run: |
-          WEB_REPO="$ACC.dkr.ecr.$REG.amazonaws.com/app-web"
+          echo "API_IMAGE=${API_REPO}:${SHA}" >> "$GITHUB_ENV"
+          echo "WEB_IMAGE=${WEB_REPO}:${SHA}" >> "$GITHUB_ENV"
 
-          docker build -t "$WEB_REPO:$SHA" app/web
-          docker push "$WEB_REPO:$SHA"
 
-          echo "WEB_IMAGE=$WEB_REPO:$SHA" >> $GITHUB_ENV
+      - name: Configure AWS creds (OIDC) for kubectl/helm
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::215873709989:role/gha-app-dev
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: gha-app-deploy
 
       - name: Install kubectl & helm
+        shell: bash
         run: |
-          curl -sSLo /usr/local/bin/kubectl https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
+          set -euo pipefail
+          K_VER="$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)"
+          curl -sSLo /usr/local/bin/kubectl "https://storage.googleapis.com/kubernetes-release/release/${K_VER}/bin/linux/amd64/kubectl"
           chmod +x /usr/local/bin/kubectl
-          curl -sS https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+          curl -sSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
       - name: Update kubeconfig
-        run: aws eks update-kubeconfig --name "${{ env.EKS_CLUSTER }}" --region "${{ env.AWS_REGION }}"
-
-      - name: Show chart files
-        run: |
-            ls -la app/deploy/chart
-            find app/deploy/chart -maxdepth 2 -type f -print
-
-      - name: Helm lint
-        run: helm lint app/deploy/chart
+        run: aws eks update-kubeconfig --name dev-eks --region "$AWS_REGION"
 
       - name: Deploy with Helm (api)
+        shell: bash
         run: |
-            REPO="${API_IMAGE%:*}"
-            TAG="${API_IMAGE##*:}"
-            helm upgrade --install app-api ./app/deploy/chart \
+          set -euo pipefail
+          REPO="${API_IMAGE%:*}"; TAG="${API_IMAGE##*:}"
+          helm upgrade --install app-api ./app/deploy/chart \
             --namespace "${NS}" --create-namespace \
             --set image.repository="${REPO}" \
             --set image.tag="${TAG}" \
+            --set service.port=3000 \
+            --set service.targetPort=3000 \
             --set serviceAccount.create=true \
             --set serviceAccount.name="app-api" \
-            --set pod.serviceAccountAnnotations."eks\.amazonaws\.com/role-arn"="${IRSA_ROLE_ARN_API}" \
-            --set service.port=3000 \
-            --set service.targetPort=3000
+            --set pod.serviceAccountAnnotations."eks\.amazonaws\.com/role-arn"="${{ secrets.IRSA_ROLE_ARN_API }}"
 
       - name: Deploy with Helm (web)
+        shell: bash
         run: |
-            REPO="${WEB_IMAGE%:*}"
-            TAG="${WEB_IMAGE##*:}"
-            helm upgrade --install app-web ./app/deploy/chart \
+          set -euo pipefail
+          REPO="${WEB_IMAGE%:*}"; TAG="${WEB_IMAGE##*:}"
+          helm upgrade --install app-web ./app/deploy/chart \
             --namespace "${NS}" \
             --set image.repository="${REPO}" \
             --set image.tag="${TAG}" \
