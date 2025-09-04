@@ -12,11 +12,7 @@ repos:
       - id: terraform_fmt
       - id: terraform_validate
       - id: terraform_tflint
-      # tfsec está deprecado → usar Trivy
       - id: terraform_trivy
-        # opcional: suavizar el fallo si solo querés avisos en PRs
-        args: [--severity, HIGH,CRITICAL, --exit-code, "0"]
-        # ↑ deja el job en verde pero te muestra findings
 
   - repo: https://github.com/rhysd/actionlint
     rev: v1.7.6
