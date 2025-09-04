@@ -57,7 +57,7 @@ jobs:
 
 
       - name: Configure AWS creds (OIDC) for kubectl/helm
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v5
         with:
           role-to-assume: arn:aws:iam::215873709989:role/gha-app-dev
           aws-region: ${{ env.AWS_REGION }}

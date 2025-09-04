@@ -36,7 +36,7 @@ jobs:
         with: { terraform_version: 1.9.x }
 
       - name: AWS creds (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v5
         with:
           role-to-assume: arn:aws:iam::215873709989:role/gha-terraform-dev
           aws-region: ${{ env.AWS_REGION }}
