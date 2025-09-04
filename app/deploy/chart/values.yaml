@@ -1,15 +1,14 @@
-namespace: app
 replicaCount: 1
 
 image:
-  repository: ""            # se inyecta desde el workflow (ECR URL)
-  tag: "latest"             # se inyecta con el SHA
+  repository: ""
+  tag: "latest"
   pullPolicy: IfNotPresent
 
 service:
   type: ClusterIP
   port: 80
-  targetPort: 3000          # ajusta a tu app (Node/React/nginx)
+  targetPort: 80
 
 resources:
   requests:
@@ -19,9 +18,14 @@ resources:
     cpu: "200m"
     memory: "256Mi"
 
+# Por defecto, sin SA específico (cada release lo define)
 serviceAccount:
-  create: true
-  name: ""        # si vacío: usa .Release.Name
+  create: false
+  name: ""
 
 pod:
-  serviceAccountAnnotations: {}  # se setea en helm para API
+  serviceAccountAnnotations: {}
+
+# Envs por defecto (vacíos)
+env: []
+secretEnv: []

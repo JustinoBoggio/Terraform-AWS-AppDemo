@@ -1,0 +1,16 @@
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 80
+
+serviceAccount:
+  create: false
+  name: ""
+
+pod:
+  serviceAccountAnnotations: {}
+
+# Si tu web usa APP_API_URL para generar config.js
+env:
+  - name: APP_API_URL
+    value: /api/

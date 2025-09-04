@@ -79,25 +79,23 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          REPO="${API_IMAGE%:*}"; TAG="${API_IMAGE##*:}"
+          REPO="${API_IMAGE%:*}"
+          TAG="${API_IMAGE##*:}"
           helm upgrade --install app-api ./app/deploy/chart \
             --namespace "${NS}" --create-namespace \
+            -f app/deploy/chart/values-api.yaml \
             --set image.repository="${REPO}" \
             --set image.tag="${TAG}" \
-            --set service.port=3000 \
-            --set service.targetPort=3000 \
-            --set serviceAccount.create=true \
-            --set serviceAccount.name="app-api" \
             --set pod.serviceAccountAnnotations."eks\.amazonaws\.com/role-arn"="${{ secrets.IRSA_ROLE_ARN_API }}"
 
       - name: Deploy with Helm (web)
         shell: bash
         run: |
           set -euo pipefail
-          REPO="${WEB_IMAGE%:*}"; TAG="${WEB_IMAGE##*:}"
+          REPO="${WEB_IMAGE%:*}"
+          TAG="${WEB_IMAGE##*:}"
           helm upgrade --install app-web ./app/deploy/chart \
             --namespace "${NS}" \
+            -f app/deploy/chart/values-web.yaml \
             --set image.repository="${REPO}" \
-            --set image.tag="${TAG}" \
-            --set service.port=80 \
-            --set service.targetPort=80
+            --set image.tag="${TAG}"

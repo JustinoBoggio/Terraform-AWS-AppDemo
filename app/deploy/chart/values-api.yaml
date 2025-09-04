@@ -1,0 +1,24 @@
+service:
+  type: ClusterIP
+  port: 3000
+  targetPort: 3000
+
+serviceAccount:
+  create: true
+  name: app-api
+
+pod:
+  # El ARN de IRSA lo inyectamos desde la pipeline para no commitearlo;
+  # acá queda vacío y se mergea en runtime.
+  serviceAccountAnnotations: {}
+
+env:
+  - name: AWS_REGION
+    value: us-east-1
+  - name: S3_BUCKET
+    value: justi-app-dev-215873709989
+
+secretEnv:
+  - name: DATABASE_URL
+    secretName: app-db
+    secretKey: DATABASE_URL
