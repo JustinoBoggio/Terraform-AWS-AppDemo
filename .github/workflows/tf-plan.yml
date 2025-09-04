@@ -2,11 +2,10 @@ name: tf-plan (dev)
 
 on:
   pull_request:
-    paths:
-      - 'environments/dev/**'
-      - 'modules/**'
-      - '.github/workflows/tf-plan.yml'
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch: {}
 
+# Mantengo permisos; el OIDC solo se usa si hay cambios de infra (gate en steps)
 permissions:
   id-token: write
   contents: read
@@ -25,15 +24,33 @@ jobs:
     defaults:
       run:
         shell: bash
-        working-directory: environments/dev
 
     steps:
       - uses: actions/checkout@v4
 
+      # 1) Detectar si hubo cambios de INFRA (gate del resto)
+      - id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            infra:
+              - 'environments/**'
+              - 'modules/**'
+              - '.github/workflows/tf-plan.yml'
+
+      # 2) NOOP si NO hubo cambios de infra (satisface el required check)
+      - name: No infra changes - noop
+        if: ${{ steps.filter.outputs.infra != 'true' }}
+        run: |
+          echo "NOOP - skipping terraform plan because no infra files changed."
+
+      # 3) Solo si hubo cambios de infra, corremos todo lo de Terraform
       - uses: hashicorp/setup-terraform@v3
+        if: steps.filter.outputs.infra == 'true'
         with: { terraform_version: 1.9.x }
 
       - name: AWS creds (OIDC)
+        if: steps.filter.outputs.infra == 'true'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::215873709989:role/gha-terraform-dev
@@ -41,27 +58,37 @@ jobs:
           role-session-name: gha-tf-plan
 
       - name: WhoAmI
+        if: steps.filter.outputs.infra == 'true'
         run: aws sts get-caller-identity
 
       - name: Terraform init
+        if: steps.filter.outputs.infra == 'true'
+        working-directory: environments/dev
         run: terraform init -input=false
 
       - name: Format & Validate
+        if: steps.filter.outputs.infra == 'true'
+        working-directory: environments/dev
         run: |
           terraform fmt -check
           terraform validate
 
       - name: TFLint
+        if: steps.filter.outputs.infra == 'true'
+        working-directory: environments/dev
         run: |
           curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
           tflint --init
           tflint
 
       - name: tfsec (IaC scan)
-        uses: aquasecurity/tfsec-action@v1.0.3
+        if: steps.filter.outputs.infra == 'true'
+        uses: aquasecurity/tfsec-action@v1.0.0
         with:
           working_directory: environments/dev
           soft_fail: true
 
       - name: Terraform plan
+        if: steps.filter.outputs.infra == 'true'
+        working-directory: environments/dev
         run: terraform plan -input=false
