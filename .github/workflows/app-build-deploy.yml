@@ -61,16 +61,21 @@ jobs:
           role-session-name: gha-app-deploy
 
       - name: Install kubectl & helm
+        shell: bash
         run: |
-          curl -sSLo /usr/local/bin/kubectl https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
+          set -euo pipefail
+          K_VER="$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)"
+          curl -sSLo /usr/local/bin/kubectl "https://storage.googleapis.com/kubernetes-release/release/${K_VER}/bin/linux/amd64/kubectl"
           chmod +x /usr/local/bin/kubectl
           curl -sSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
       - name: Update kubeconfig
-        run: aws eks update-kubeconfig --name dev-eks --region $AWS_REGION
+        run: aws eks update-kubeconfig --name dev-eks --region "$AWS_REGION"
 
       - name: Deploy with Helm (api)
+        shell: bash
         run: |
+          set -euo pipefail
           REPO="${API_IMAGE%:*}"; TAG="${API_IMAGE##*:}"
           helm upgrade --install app-api ./app/deploy/chart \
             --namespace "${NS}" --create-namespace \
@@ -83,7 +88,9 @@ jobs:
             --set pod.serviceAccountAnnotations."eks\.amazonaws\.com/role-arn"="${{ secrets.IRSA_ROLE_ARN_API }}"
 
       - name: Deploy with Helm (web)
+        shell: bash
         run: |
+          set -euo pipefail
           REPO="${WEB_IMAGE%:*}"; TAG="${WEB_IMAGE##*:}"
           helm upgrade --install app-web ./app/deploy/chart \
             --namespace "${NS}" \
