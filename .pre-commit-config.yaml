@@ -13,8 +13,13 @@ repos:
       - id: terraform_validate
       - id: terraform_tflint
       - id: terraform_trivy
+        args:
+        - --exclude-path=.terraform
+
 
   - repo: https://github.com/rhysd/actionlint
     rev: v1.7.6
     hooks:
       - id: actionlint
+        args:
+        - --exclude-path=.terraform

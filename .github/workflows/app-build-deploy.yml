@@ -40,18 +40,21 @@ jobs:
           SHA: ${{ github.sha }}
           REG: ${{ env.AWS_REGION }}
           ACC: ${{ steps.acct.outputs.id }}
+        shell: bash
         run: |
-          API_REPO="$ACC.dkr.ecr.$REG.amazonaws.com/app-api"
-          WEB_REPO="$ACC.dkr.ecr.$REG.amazonaws.com/app-web"
+          set -euo pipefail
+          API_REPO="${ACC}.dkr.ecr.${REG}.amazonaws.com/app-api"
+          WEB_REPO="${ACC}.dkr.ecr.${REG}.amazonaws.com/app-web"
 
-          docker build -t "$API_REPO:$SHA" app/api
-          docker push "$API_REPO:$SHA"
+          docker build -t "${API_REPO}:${SHA}" "app/api"
+          docker push "${API_REPO}:${SHA}"
 
-          docker build -t "$WEB_REPO:$SHA" app/web
-          docker push "$WEB_REPO:$SHA"
+          docker build -t "${WEB_REPO}:${SHA}" "app/web"
+          docker push "${WEB_REPO}:${SHA}"
 
-          echo "API_IMAGE=$API_REPO:$SHA" >> $GITHUB_ENV
-          echo "WEB_IMAGE=$WEB_REPO:$SHA" >> $GITHUB_ENV
+          echo "API_IMAGE=${API_REPO}:${SHA}" >> "$GITHUB_ENV"
+          echo "WEB_IMAGE=${WEB_REPO}:${SHA}" >> "$GITHUB_ENV"
+
 
       - name: Configure AWS creds (OIDC) for kubectl/helm
         uses: aws-actions/configure-aws-credentials@v4
