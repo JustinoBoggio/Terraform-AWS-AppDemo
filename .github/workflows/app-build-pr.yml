@@ -28,11 +28,17 @@ jobs:
         with:
           node-version: 18
 
-      - name: Install & Build
-        working-directory: app/${{ matrix.part }}
+      - name: Install & Build (web)
+        if: matrix.part == 'web'
+        working-directory: app/web
         run: |
           npm ci
           npm run build
+
+      - name: Install (api)
+        if: matrix.part == 'api'
+        working-directory: app/api
+        run: npm ci
 
       - name: Lint Dockerfile (hadolint)
         if: matrix.part == 'api' || matrix.part == 'web'

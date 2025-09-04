@@ -57,10 +57,16 @@ jobs:
           tflint --init
           tflint
 
-      - name: tfsec (quick)
-        run: |
-          curl -sSfL https://raw.githubusercontent.com/aquasecurity/tfsec/master/scripts/install.sh | sh -s -- -b /usr/local/bin
-          tfsec --soft-fail .
+      - name: tfsec (IaC scan)
+        uses: aquasecurity/tfsec-action@v1.0.3
+        with:
+          working_directory: environments/dev
+          soft_fail: true
+
+      - name: Upload SARIF to code scanning
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: tfsec.sarif
 
       - name: Terraform plan
         run: terraform plan -input=false
