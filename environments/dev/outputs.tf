@@ -19,6 +19,12 @@ output "cluster_name" {
 output "cluster_endpoint" {
   value = module.eks.cluster_endpoint
 }
-# output "cluster_ca" {
-#   value = module.eks.cluster_certificate_authority_data
-# }
+
+output "IRSA_role_arn" {
+  description = "Role IRSA para la app API"
+  value       = module.irsa_app_api.role_arn
+}
+
+output "eso_role_arn" {
+  value = module.iam_irsa_eso.role_arn
+}

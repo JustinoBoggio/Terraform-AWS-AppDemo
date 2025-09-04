@@ -294,3 +294,29 @@ module "irsa_app_api" {
     Owner       = "justino"
   }
 }
+
+data "aws_caller_identity" "current" {}
+
+module "iam_irsa_eso" {
+  source = "../../modules/iam-roles/k8s-eso-irsa"
+
+  aws_region              = var.aws_region
+  cluster_oidc_issuer_url = module.eks.cluster_oidc_issuer_url
+  oidc_provider_arn       = module.eks.oidc_provider_arn
+
+  service_account_namespace = "external-secrets"
+  service_account_name      = "external-secrets"
+
+  allowed_secret_arns = [
+    "arn:aws:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:dev/app/db*"
+  ]
+
+  role_name = "eso-controller-dev"
+
+  tags = {
+    Project     = "devops-lab"
+    Environment = "dev"
+    Owner       = "justino"
+  }
+}
+
