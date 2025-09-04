@@ -2,10 +2,8 @@ name: tf-plan (dev)
 
 on:
   pull_request:
-    paths:
-      - 'environments/dev/**'
-      - 'modules/**'
-      - '.github/workflows/tf-plan.yml'
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch: {}
 
 permissions:
   id-token: write
@@ -22,18 +20,35 @@ env:
 jobs:
   plan:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash
-        working-directory: environments/dev
 
     steps:
       - uses: actions/checkout@v4
 
-      - uses: hashicorp/setup-terraform@v3
-        with: { terraform_version: 1.9.x }
+      # Detect changes that matter for Terraform
+      - id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            infra:
+              - "environments/**"
+              - "modules/**"
+              - ".github/workflows/tf-plan.yml"
 
-      - name: AWS creds (OIDC)
+      # NOOP when no infra changes (so the required check still passes)
+      - name: No infra changes - noop
+        if: ${{ steps.filter.outputs.infra != 'true' }}
+        run: |
+          echo "NOOP - skipping terraform plan because no infra files changed."
+
+      # Real plan only when infra changed
+      - name: Setup Terraform
+        if: ${{ steps.filter.outputs.infra == 'true' }}
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.x"
+
+      - name: Configure AWS credentials (OIDC)
+        if: ${{ steps.filter.outputs.infra == 'true' }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::215873709989:role/gha-terraform-dev
@@ -41,27 +56,37 @@ jobs:
           role-session-name: gha-tf-plan
 
       - name: WhoAmI
+        if: ${{ steps.filter.outputs.infra == 'true' }}
         run: aws sts get-caller-identity
 
       - name: Terraform init
+        if: ${{ steps.filter.outputs.infra == 'true' }}
+        working-directory: environments/dev
         run: terraform init -input=false
 
-      - name: Format & Validate
+      - name: Format and validate
+        if: ${{ steps.filter.outputs.infra == 'true' }}
+        working-directory: environments/dev
         run: |
           terraform fmt -check
           terraform validate
 
       - name: TFLint
+        if: ${{ steps.filter.outputs.infra == 'true' }}
+        working-directory: environments/dev
         run: |
           curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
           tflint --init
           tflint
 
       - name: tfsec (IaC scan)
+        if: ${{ steps.filter.outputs.infra == 'true' }}
         uses: aquasecurity/tfsec-action@v1.0.3
         with:
           working_directory: environments/dev
           soft_fail: true
 
       - name: Terraform plan
+        if: ${{ steps.filter.outputs.infra == 'true' }}
+        working-directory: environments/dev
         run: terraform plan -input=false
