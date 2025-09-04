@@ -1,9 +1,10 @@
 plugin "aws" {
   enabled = true
-  version = "0.33.1"
+  # Dejá que baje la última release estable (evita 404 por tags viejas).
   source  = "github.com/terraform-linters/tflint-ruleset-aws"
 }
 
 config {
-  module = true
+  # Reemplaza el viejo "module = true"
+  call_module_type = "all"
 }
