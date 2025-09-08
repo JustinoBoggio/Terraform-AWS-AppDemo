@@ -1,4 +1,5 @@
 import express from "express";
+import client from "prom-client";
 import cors from "cors";
 import { Pool } from "pg";
 import { S3Client, PutObjectCommand, GetObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
@@ -6,6 +7,9 @@ import { Readable } from "node:stream";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+const register = new client.Registry();
+client.collectDefaultMetrics({ register });
 
 app.use(cors());
 app.use(express.json());
@@ -183,4 +187,16 @@ app.get("/api/s3/list", async (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`API listening on port ${PORT}`);
+});
+
+
+// endpoint de salud
+app.get("/api/healthz", (_req, res) => {
+  res.status(200).send("ok");
+});
+
+// endpoint de métricas
+app.get("/metrics", async (_req, res) => {
+  res.setHeader("Content-Type", register.contentType);
+  res.end(await register.metrics());
 });
