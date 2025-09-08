@@ -5,7 +5,7 @@ service:
 
 serviceAccount:
   create: false
-  name: ""
+  name: default
 
 pod:
   serviceAccountAnnotations: {}
