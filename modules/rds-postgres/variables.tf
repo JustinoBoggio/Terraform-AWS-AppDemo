@@ -5,7 +5,7 @@ variable "db_name" {
 
 variable "engine_version" {
   type        = string
-  default     = "15.8"
+  default     = "15.12"
 }
 
 variable "instance_class" {

@@ -1,8 +1,8 @@
 locals {
-  clean_prefix   = trim(var.s3_prefix, "/")
+  clean_prefix  = trim(var.s3_prefix, "/")               # ej: "app"  o "" (raíz)
   object_suffix  = local.clean_prefix != "" ? "/${local.clean_prefix}/*" : "/*"
   bucket_arn     = var.s3_bucket_arn
-  object_arn     = "${var.s3_bucket_arn}${local.object_suffix}"
+  objects_arn   = local.clean_prefix != "" ? "${var.s3_bucket_arn}/${local.clean_prefix}/*" : "${var.s3_bucket_arn}/*"
 }
 
 data "aws_iam_policy_document" "assume_role" {
@@ -37,14 +37,14 @@ resource "aws_iam_role" "this" {
 
 # Policy mínima SOLO S3 (la app NO lee Secrets Manager si usás ESO)
 data "aws_iam_policy_document" "app" {
-  # 1) ListBucket: solo bucket ARN
+  # ListBucket: solo bucket ARN
   statement {
     sid     = "ListBucket"
     effect  = "Allow"
     actions = ["s3:ListBucket"]
-    resources = [local.bucket_arn]
+    resources = [var.s3_bucket_arn]
 
-    # (opcional) si querés acotar el listado a un prefijo:
+    # (opcional) limitar listado a un prefijo
     # condition {
     #   test     = "StringLike"
     #   variable = "s3:prefix"
@@ -52,14 +52,15 @@ data "aws_iam_policy_document" "app" {
     # }
   }
 
-  # 2) RW en objetos: solo object ARN
+  # RW en objetos: solo objetos bajo el prefijo
   statement {
     sid     = "RWObjects"
     effect  = "Allow"
     actions = ["s3:GetObject", "s3:PutObject"]
-    resources = [local.object_arn]
+    resources = [local.objects_arn]
   }
 }
+
 resource "aws_iam_policy" "app" {
   name   = "irsa-${var.k8s_namespace}-${var.k8s_service_account}"
   policy = data.aws_iam_policy_document.app.json

@@ -238,7 +238,7 @@ module "rds_postgres" {
   source = "../../modules/rds-postgres"
 
   db_name              = "appdb"
-  engine_version       = "15.8"
+  engine_version       = "15.12"
   instance_class       = "db.t4g.micro"
   allocated_storage_gb = 20
 
