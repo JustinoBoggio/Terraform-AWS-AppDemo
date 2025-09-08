@@ -51,7 +51,6 @@ data "aws_iam_policy_document" "app" {
     #   values   = [local.clean_prefix != "" ? "${local.clean_prefix}/*" : "*"]
     # }
   }
-
   # RW en objetos: solo objetos bajo el prefijo
   statement {
     sid     = "RWObjects"
@@ -60,7 +59,6 @@ data "aws_iam_policy_document" "app" {
     resources = [local.objects_arn]
   }
 }
-
 resource "aws_iam_policy" "app" {
   name   = "irsa-${var.k8s_namespace}-${var.k8s_service_account}"
   policy = data.aws_iam_policy_document.app.json
