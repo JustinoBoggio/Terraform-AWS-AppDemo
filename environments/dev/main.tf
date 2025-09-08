@@ -320,3 +320,25 @@ module "iam_irsa_eso" {
   }
 }
 
+
+module "observability" {
+  source = "../../modules/observability"
+
+  enable_metrics_server          = true
+  enable_kube_prometheus_stack   = true
+  namespace                      = "monitoring"
+
+  grafana_enabled                = true
+  grafana_admin_password         = null         # usa default del chart ("prom-operator"), o setea la tuya
+
+  prometheus_retention           = "3d"
+
+  # ServiceMonitor para app-api
+  app_api_service_monitor_enabled = true
+  app_api_namespace               = "app"
+  app_api_label_instance          = "app-api"
+  app_api_label_name              = "app"
+  app_api_metrics_port            = "http"      # asegurate que tu Service tiene "name: http"
+  app_api_metrics_path            = "/metrics"
+  app_api_scrape_interval         = "30s"
+}

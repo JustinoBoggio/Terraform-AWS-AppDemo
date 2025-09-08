@@ -2,6 +2,23 @@ service:
   type: ClusterIP
   port: 3000
   targetPort: 3000
+  portName: http
+
+probes:
+  enabled: true
+  path: /api/healthz
+  initialDelaySeconds: 10
+  periodSeconds: 10
+
+hpa:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 3
+  cpu:
+    enabled: true
+    averageUtilization: 60
+  memory:
+    enabled: false
 
 serviceAccount:
   create: true

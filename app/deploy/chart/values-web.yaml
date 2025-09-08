@@ -2,6 +2,16 @@ service:
   type: ClusterIP
   port: 80
   targetPort: 80
+  portName: http
+
+probes:
+  enabled: true
+  path: /
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+hpa:
+  enabled: false
 
 serviceAccount:
   create: false
