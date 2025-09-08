@@ -286,7 +286,7 @@ module "irsa_app_api" {
 
   secretsmanager_arns = [aws_secretsmanager_secret.db.arn]
   s3_bucket_arn       = module.s3_app.bucket_arn
-  s3_prefix           = "app/*"
+  s3_prefix           = ""
 
   tags = {
     Project     = "devops-lab"
