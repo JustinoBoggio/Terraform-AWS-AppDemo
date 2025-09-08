@@ -13,4 +13,4 @@ pod:
 # Si tu web usa APP_API_URL para generar config.js
 env:
   - name: APP_API_URL
-    value: /api/
+    value: /api

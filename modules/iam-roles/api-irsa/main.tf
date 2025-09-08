@@ -43,13 +43,6 @@ data "aws_iam_policy_document" "app" {
     effect  = "Allow"
     actions = ["s3:ListBucket"]
     resources = [var.s3_bucket_arn]
-
-    # (opcional) limitar listado a un prefijo
-    # condition {
-    #   test     = "StringLike"
-    #   variable = "s3:prefix"
-    #   values   = [local.clean_prefix != "" ? "${local.clean_prefix}/*" : "*"]
-    # }
   }
   # RW en objetos: solo objetos bajo el prefijo
   statement {

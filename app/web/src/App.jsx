@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 
+// Une base + path sin duplicar ni perder slashes
+const joinApi = (base, path = "") =>
+  `${String(base).replace(/\/+$/, "")}/${String(path).replace(/^\/+/, "")}`;
+
 export default function App() {
+  // default sin barra final
   const [apiUrl, setApiUrl] = useState("/api");
   const [hello, setHello] = useState("");
   const [time, setTime] = useState("");
@@ -8,17 +13,18 @@ export default function App() {
   useEffect(() => {
     // lee config generada en runtime por entrypoint.sh
     const cfg = window.__APP_CONFIG__ || {};
-    setApiUrl(cfg.API_URL || "/api");
+    // normaliza (sin slash final)
+    setApiUrl(String(cfg.API_URL || "/api").replace(/\/+$/, ""));
   }, []);
 
   const fetchHello = async () => {
-    const r = await fetch(`${apiUrl}/hello`);
+    const r = await fetch(joinApi(apiUrl, "hello"));
     const j = await r.json();
     setHello(j.message);
   };
 
   const fetchTime = async () => {
-    const r = await fetch(`${apiUrl}/time`);
+    const r = await fetch(joinApi(apiUrl, "time"));
     const j = await r.json();
     setTime(j.now);
   };
