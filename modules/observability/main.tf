@@ -24,8 +24,6 @@ resource "helm_release" "metrics_server" {
     ]
   }) ]
 }
-
-
 # ---- kube-prometheus-stack (Prom + Grafana + Alertmanager) ----
 resource "helm_release" "kps" {
   count            = var.enable_kube_prometheus_stack ? 1 : 0
@@ -42,7 +40,6 @@ resource "helm_release" "kps" {
   timeout         = 1200           # 20 min para CRDs y operator
   wait            = true
   dependency_update = true
-
   values = [
     yamlencode({
       grafana = {
