@@ -29,6 +29,7 @@ output "eso_role_arn" {
   value = module.iam_irsa_eso.role_arn
 }
 
+
 # output "grafana_port_forward" {
 #   value = module.observability.grafana_port_forward
 # }

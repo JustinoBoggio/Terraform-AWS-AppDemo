@@ -335,7 +335,6 @@ module "iam_irsa_eso" {
   }
 }
 
-
 # module "observability" {
 #   source = "../../modules/observability"
 
