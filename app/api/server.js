@@ -1,18 +1,17 @@
 import express from "express";
-import client from "prom-client";
 import cors from "cors";
 import { Pool } from "pg";
 import { S3Client, PutObjectCommand, GetObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
 import { Readable } from "node:stream";
 
+import { register, metricsMiddleware, timeIt, dbDuration, s3Duration } from "./metrics.js"; // <-
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const register = new client.Registry();
-client.collectDefaultMetrics({ register });
-
 app.use(cors());
 app.use(express.json());
+app.use(metricsMiddleware); // <— mide todas las requests
 
 // ------- Configuración via env -------
 // DB: preferimos una DATABASE_URL (postgres://user:pass@host:5432/db?sslmode=require)
@@ -81,9 +80,11 @@ app.get("/api/time", (req, res) => {
 // ------- Rutas DB -------
 
 // Ping DB
-app.get("/api/db/ping", async (req, res) => {
+app.get("/api/db/ping", async (_req, res) => {
   try {
-    const r = await pool.query("SELECT 1 as ok");
+    const r = await timeIt(dbDuration, { op: "ping" }, () =>
+      pool.query("SELECT 1 as ok")
+    );
     res.json({ ok: r.rows[0].ok === 1 });
   } catch (e) {
     console.error(e);
@@ -112,7 +113,9 @@ app.post("/api/db/init", async (req, res) => {
 app.post("/api/db/users", async (req, res) => {
   try {
     const name = req.body?.name || "john doe";
-    const r = await pool.query("INSERT INTO demo_users (name) VALUES ($1) RETURNING *", [name]);
+    const r = await timeIt(dbDuration, { op: "insert" }, () =>
+      pool.query("INSERT INTO demo_users (name) VALUES ($1) RETURNING *", [name])
+    );
     res.json({ inserted: r.rows[0] });
   } catch (e) {
     console.error(e);
@@ -139,12 +142,16 @@ app.post("/api/s3/put", async (req, res) => {
     if (!S3_BUCKET) throw new Error("Missing env S3_BUCKET");
     const key = req.query.key || `demo-${Date.now()}.txt`;
     const content = req.body?.content || `hello from api at ${new Date().toISOString()}`;
-    await s3.send(new PutObjectCommand({
-      Bucket: S3_BUCKET,
-      Key: String(key),
-      Body: content,
-      ContentType: "text/plain",
-    }));
+
+    await timeIt(s3Duration, { op: "PutObject" }, () =>
+      s3.send(new PutObjectCommand({
+        Bucket: S3_BUCKET,
+        Key: String(key),
+        Body: content,
+        ContentType: "text/plain",
+      }))
+    );
+
     res.json({ ok: true, bucket: S3_BUCKET, key });
   } catch (e) {
     console.error(e);
@@ -197,6 +204,6 @@ app.get("/api/healthz", (_req, res) => {
 
 // endpoint de métricas
 app.get("/metrics", async (_req, res) => {
-  res.setHeader("Content-Type", register.contentType);
+  res.set("Content-Type", register.contentType);
   res.end(await register.metrics());
 });
