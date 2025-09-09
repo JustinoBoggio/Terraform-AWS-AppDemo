@@ -1,0 +1,31 @@
+grafana:
+  enabled: true
+  service: { type: ClusterIP }
+  adminUser: admin
+  adminPassword: "changeme-123"
+  resources:
+    requests: { cpu: "50m",  memory: "128Mi" }
+    limits:   { cpu: "200m", memory: "256Mi" }
+
+alertmanager:
+  enabled: false
+
+prometheus:
+  service: { type: ClusterIP }
+  prometheusSpec:
+    retention: "2d"
+    storageSpec: null
+    scrapeInterval: "30s"
+    resources:
+      requests: { cpu: "150m", memory: "256Mi" }
+      limits:   { cpu: "400m", memory: "512Mi" }
+
+# En EKS estos no aplican como Pods de usuario:
+kubeControllerManager: { enabled: false }
+kubeScheduler:         { enabled: false }
+kubeProxy:             { enabled: false }
+kubeEtcd:              { enabled: false }
+
+defaultRules:
+  rules:
+    etcd: false
