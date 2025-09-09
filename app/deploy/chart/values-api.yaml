@@ -45,3 +45,9 @@ serviceMonitor:
   namespace: monitoring
   path: /metrics
   interval: 30s
+
+alerts:
+  enabled: true
+  errorRateThreshold: 0.02          # 2%
+  latencyP95ThresholdSeconds: 0.5    # 500 ms
+  for: 10m

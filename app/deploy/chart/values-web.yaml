@@ -27,3 +27,6 @@ env:
 
 serviceMonitor:
   enabled: false
+
+alerts:
+  enabled: false
