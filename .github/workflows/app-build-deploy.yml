@@ -41,25 +41,50 @@ jobs:
         id: acct
         run: echo "id=$(aws sts get-caller-identity --query Account --output text)" >> "$GITHUB_OUTPUT"
 
-      - name: Build & Push images (api & web)
+      - name: Resolve & build/push images if missing
+        id: images
         env:
           SHA: ${{ github.sha }}
           REG: ${{ env.AWS_REGION }}
-          ACC: ${{ steps.acct.outputs.id }}
         shell: bash
         run: |
           set -euo pipefail
+          ACC="$(aws sts get-caller-identity --query Account --output text)"
           API_REPO="${ACC}.dkr.ecr.${REG}.amazonaws.com/app-api"
           WEB_REPO="${ACC}.dkr.ecr.${REG}.amazonaws.com/app-web"
+          TAG="${SHA}"
 
-          docker build -t "${API_REPO}:${SHA}" "app/api"
-          docker push "${API_REPO}:${SHA}"
+          exists() {
+            local repo="$1" name="$2"
+            aws ecr describe-images \
+              --repository-name "$name" \
+              --image-ids imageTag="$TAG" \
+              >/dev/null 2>&1
+          }
 
-          docker build -t "${WEB_REPO}:${SHA}" "app/web"
-          docker push "${WEB_REPO}:${SHA}"
+          if exists "$API_REPO" "app-api"; then
+            echo "API image $API_REPO:$TAG ya existe → skip build/push"
+          else
+            echo "API image $API_REPO:$TAG NO existe → build & push"
+            docker build -t "$API_REPO:$TAG" app/api
+            docker push "$API_REPO:$TAG"
+          fi
 
-          echo "API_IMAGE=${API_REPO}:${SHA}" >> "$GITHUB_ENV"
-          echo "WEB_IMAGE=${WEB_REPO}:${SHA}" >> "$GITHUB_ENV"
+          if exists "$WEB_REPO" "app-web"; then
+            echo "WEB image $WEB_REPO:$TAG ya existe → skip build/push"
+          else
+            echo "WEB image $WEB_REPO:$TAG NO existe → build & push"
+            docker build -t "$WEB_REPO:$TAG" app/web
+            docker push "$WEB_REPO:$TAG"
+          fi
+
+          {
+            echo "API_REPO=$API_REPO"
+            echo "WEB_REPO=$WEB_REPO"
+            echo "IMAGE_TAG=$TAG"
+            echo "API_IMAGE=$API_REPO:$TAG"
+            echo "WEB_IMAGE=$WEB_REPO:$TAG"
+          } >> "$GITHUB_ENV"
 
 
       - name: Configure AWS creds (OIDC) for kubectl/helm
@@ -85,23 +110,19 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          REPO="${API_IMAGE%:*}"
-          TAG="${API_IMAGE##*:}"
           helm upgrade --install app-api ./app/deploy/chart \
             --namespace "${NS}" --create-namespace \
             -f app/deploy/chart/values-api.yaml \
-            --set image.repository="${REPO}" \
-            --set image.tag="${TAG}" \
+            --set image.repository="${API_REPO}" \
+            --set image.tag="${IMAGE_TAG}" \
             --set pod.serviceAccountAnnotations."eks\.amazonaws\.com/role-arn"="${{ secrets.IRSA_ROLE_ARN_API }}"
 
       - name: Deploy with Helm (web)
         shell: bash
         run: |
           set -euo pipefail
-          REPO="${WEB_IMAGE%:*}"
-          TAG="${WEB_IMAGE##*:}"
           helm upgrade --install app-web ./app/deploy/chart \
             --namespace "${NS}" \
             -f app/deploy/chart/values-web.yaml \
-            --set image.repository="${REPO}" \
-            --set image.tag="${TAG}"
+            --set image.repository="${WEB_REPO}" \
+            --set image.tag="${IMAGE_TAG}"
