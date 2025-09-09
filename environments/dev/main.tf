@@ -169,10 +169,10 @@ module "eks" {
 
   # asegura add-ons al último parche tras el upgrade
   cluster_addons = {
-    coredns   = { most_recent = true }
+    coredns    = { most_recent = true }
     kube-proxy = { most_recent = true }
     vpc-cni = {
-      most_recent          = true
+      most_recent = true
       configuration_values = jsonencode({
         env = {
           ENABLE_PREFIX_DELEGATION = "true"
