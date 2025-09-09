@@ -24,3 +24,6 @@ pod:
 env:
   - name: APP_API_URL
     value: /api
+
+serviceMonitor:
+  enabled: false
