@@ -1,0 +1,78 @@
+{
+  "title": "API Overview (app-api)",
+  "timezone": "browser",
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "RPS por ruta",
+      "targets": [
+        {
+          "expr": "sum by (route) (rate(http_request_duration_seconds_count{namespace=\"app\"}[5m]))",
+          "legendFormat": "{{route}}"
+        }
+      ],
+      "gridPos": {"x":0,"y":0,"w":12,"h":8}
+    },
+    {
+      "type": "timeseries",
+      "title": "p95 latencia por ruta (s)",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, route) (rate(http_request_duration_seconds_bucket{namespace=\"app\"}[5m])))",
+          "legendFormat": "{{route}}"
+        }
+      ],
+      "gridPos": {"x":12,"y":0,"w":12,"h":8}
+    },
+    {
+      "type": "timeseries",
+      "title": "Errores 5xx por ruta (rate)",
+      "targets": [
+        {
+          "expr": "sum by (route) (rate(http_request_duration_seconds_count{namespace=\"app\", code=~\"5..\"}[5m]))",
+          "legendFormat": "{{route}}"
+        }
+      ],
+      "gridPos": {"x":0,"y":8,"w":12,"h":8}
+    },
+    {
+      "type": "timeseries",
+      "title": "DB p95 por operación (s)",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, op) (rate(db_query_duration_seconds_bucket{namespace=\"app\"}[5m])))",
+          "legendFormat": "{{op}}"
+        }
+      ],
+      "gridPos": {"x":12,"y":8,"w":12,"h":8}
+    },
+    {
+      "type": "timeseries",
+      "title": "S3 p95 por operación (s)",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, op) (rate(s3_operation_duration_seconds_bucket{namespace=\"app\"}[5m])))",
+          "legendFormat": "{{op}}"
+        }
+      ],
+      "gridPos": {"x":0,"y":16,"w":12,"h":8}
+    },
+    {
+      "type": "timeseries",
+      "title": "CPU/Mem del pod",
+      "targets": [
+        {
+          "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"app\", pod=~\"app-api-.*\"}[5m]))",
+          "legendFormat": "cpu {{pod}}"
+        },
+        {
+          "expr": "container_memory_working_set_bytes{namespace=\"app\", pod=~\"app-api-.*\"}",
+          "legendFormat": "mem {{pod}}"
+        }
+      ],
+      "gridPos": {"x":12,"y":16,"w":12,"h":8}
+    }
+  ],
+  "schemaVersion": 38,
+  "version": 1
+}

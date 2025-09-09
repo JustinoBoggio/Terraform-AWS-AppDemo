@@ -1,0 +1,47 @@
+{{- if .Values.alerts.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ .Release.Name }}-alerts
+  namespace: {{ .Values.serviceMonitor.namespace | default "monitoring" }}
+  labels:
+    release: kube-prometheus-stack
+    app.kubernetes.io/name: {{ .Chart.Name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  groups:
+  - name: app-api.rules
+    interval: 30s
+    rules:
+    # --- Recording: RPS y p95 (para que queries de alert sean livianas) ---
+    - record: app:http_requests:rate5m
+      expr: sum by (route) (rate(http_request_duration_seconds_count{namespace="{{ .Release.Namespace }}"}[5m]))
+    - record: app:http_request_p95_seconds
+      expr: histogram_quantile(0.95, sum by (le, route) (rate(http_request_duration_seconds_bucket{namespace="{{ .Release.Namespace }}"}[5m])))
+
+    # --- Alert: Error rate >= X% (por ruta) ---
+    - alert: AppHighErrorRate
+      expr: |
+        (sum by (route) (rate(http_request_duration_seconds_count{namespace="{{ .Release.Namespace }}",code=~"5.."}[5m]))
+        /
+         sum by (route) (rate(http_request_duration_seconds_count{namespace="{{ .Release.Namespace }}"}[5m]))
+        ) > {{ .Values.alerts.errorRateThreshold | default 0.02 }}
+      for: {{ .Values.alerts.for | default "10m" }}
+      labels:
+        severity: warning
+        service: app-api
+      annotations:
+        summary: "High error rate ({{`{{ $labels.route }}`}})"
+        description: "5xx ratio > {{ .Values.alerts.errorRateThreshold | default 0.02 }} en 10m"
+
+    # --- Alert: p95 > umbral ---
+    - alert: AppHighLatencyP95
+      expr: app:http_request_p95_seconds > {{ .Values.alerts.latencyP95ThresholdSeconds | default 0.5 }}
+      for: {{ .Values.alerts.for | default "10m" }}
+      labels:
+        severity: warning
+        service: app-api
+      annotations:
+        summary: "High latency p95"
+        description: "p95 > {{ .Values.alerts.latencyP95ThresholdSeconds | default 0.5 }}s en 10m"
+{{- end }}
