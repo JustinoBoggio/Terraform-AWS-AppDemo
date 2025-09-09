@@ -152,7 +152,7 @@ module "eks" {
   version = "20.24.1" # fíjalo; luego bump controlado
 
   cluster_name    = "dev-eks"
-  cluster_version = "1.30"
+  cluster_version = "1.31"
 
   # Networking (de tu módulo VPC)
   vpc_id     = module.vpc.vpc_id
@@ -166,6 +166,21 @@ module "eks" {
 
   # Logs de control plane (baratos y útiles)
   cluster_enabled_log_types = ["api", "audit", "authenticator"]
+
+  # asegura add-ons al último parche tras el upgrade
+  cluster_addons = {
+    coredns    = { most_recent = true }
+    kube-proxy = { most_recent = true }
+    vpc-cni = {
+      most_recent = true
+      configuration_values = jsonencode({
+        env = {
+          ENABLE_PREFIX_DELEGATION = "true"
+          WARM_PREFIX_TARGET       = "1"
+        }
+      })
+    }
+  }
 
   # Node group Spot barato (t3.small). Ajusta a ARM si te conviene (t4g.small)
   eks_managed_node_groups = {
@@ -320,25 +335,31 @@ module "iam_irsa_eso" {
   }
 }
 
+# module "observability" {
+#   source = "../../modules/observability"
 
-module "observability" {
-  source = "../../modules/observability"
+#   providers = {
+#     kubernetes = kubernetes.eks
+#     helm       = helm.eks
+#   }
 
-  enable_metrics_server        = true
-  enable_kube_prometheus_stack = true
-  namespace                    = "monitoring"
+#   enable_metrics_server        = true
+#   enable_kube_prometheus_stack = true
+#   namespace                    = "monitoring"
 
-  grafana_enabled        = true
-  grafana_admin_password = null # usa default del chart ("prom-operator"), o setea la tuya
+#   grafana_enabled        = true
+#   grafana_admin_password = null # usa default del chart ("prom-operator"), o setea la tuya
 
-  prometheus_retention = "3d"
+#   prometheus_retention = "3d"
 
-  # ServiceMonitor para app-api
-  app_api_service_monitor_enabled = true
-  app_api_namespace               = "app"
-  app_api_label_instance          = "app-api"
-  app_api_label_name              = "app"
-  app_api_metrics_port            = "http" # asegurate que tu Service tiene "name: http"
-  app_api_metrics_path            = "/metrics"
-  app_api_scrape_interval         = "30s"
-}
+#   # ServiceMonitor para app-api
+#   app_api_service_monitor_enabled = true
+#   app_api_namespace               = "app"
+#   app_api_label_instance          = "app-api"
+#   app_api_label_name              = "app"
+#   app_api_metrics_port            = "http" # asegurate que tu Service tiene "name: http"
+#   app_api_metrics_path            = "/metrics"
+#   app_api_scrape_interval         = "30s"
+
+#   depends_on = [module.eks]
+# }

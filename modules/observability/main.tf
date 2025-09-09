@@ -15,20 +15,15 @@ resource "helm_release" "metrics_server" {
   namespace        = "kube-system"
   repository       = "https://kubernetes-sigs.github.io/metrics-server/"
   chart            = "metrics-server"
-  # version        = "3.12.1" # opcional, podés fijarla; si te falla, comentala
   create_namespace = false
 
-  # flags útiles en EKS
-  set {
-    name  = "args[0]"
-    value = "--kubelet-preferred-address-types=InternalIP,Hostname,ExternalIP"
-  }
-  set {
-    name  = "args[1]"
-    value = "--kubelet-insecure-tls"
-  }
+  values = [ yamlencode({
+    args = [
+      "--kubelet-insecure-tls",
+      "--kubelet-preferred-address-types=InternalIP,Hostname,ExternalIP"
+    ]
+  }) ]
 }
-
 # ---- kube-prometheus-stack (Prom + Grafana + Alertmanager) ----
 resource "helm_release" "kps" {
   count            = var.enable_kube_prometheus_stack ? 1 : 0
@@ -36,11 +31,15 @@ resource "helm_release" "kps" {
   namespace        = var.namespace
   repository       = "https://prometheus-community.github.io/helm-charts"
   chart            = "kube-prometheus-stack"
-  # version        = "58.3.0" # opcional: fijá versión; si no existe, quita esta línea
   create_namespace = false
   depends_on       = [kubernetes_namespace.this]
 
-  # Valores mínimos para costo bajo (sin PVCs, ClusterIP, retention corta)
+  # Para evitar estados “failed” colgados y esperas cortas
+  atomic          = true           # si falla, desinstala
+  cleanup_on_fail = true
+  timeout         = 1200           # 20 min para CRDs y operator
+  wait            = true
+  dependency_update = true
   values = [
     yamlencode({
       grafana = {
@@ -58,7 +57,7 @@ resource "helm_release" "kps" {
         service = { type = "ClusterIP" }
         alertmanagerSpec = {
           retention = "120h"
-          storage   = null # sin PVC (emptyDir)
+          storage   = null
           resources = {
             requests = { cpu = "20m", memory = "64Mi" }
             limits   = { cpu = "100m", memory = "128Mi" }
@@ -69,16 +68,16 @@ resource "helm_release" "kps" {
       prometheus = {
         service = { type = "ClusterIP" }
         prometheusSpec = {
-          retention   = var.prometheus_retention
-          storageSpec = null # sin PVC (emptyDir)
+          retention     = var.prometheus_retention
+          storageSpec   = null
+          scrapeInterval = "30s"
           resources = {
             requests = { cpu = "150m", memory = "256Mi" }
             limits   = { cpu = "500m", memory = "512Mi" }
           }
-          scrapeInterval = "30s"
         }
 
-        # 👉 ServiceMonitor para tu app-api (renderizado por el chart)
+        # ServiceMonitor para tu API (solo si lo habilitaste por var)
         additionalServiceMonitors = var.app_api_service_monitor_enabled ? [
           {
             name = "app-api"
@@ -93,7 +92,7 @@ resource "helm_release" "kps" {
             }
             endpoints = [
               {
-                port     = var.app_api_metrics_port   # debe existir en el Service (name: http)
+                port     = var.app_api_metrics_port
                 path     = var.app_api_metrics_path
                 interval = var.app_api_scrape_interval
               }
@@ -102,12 +101,18 @@ resource "helm_release" "kps" {
         ] : []
       }
 
-      kubeControllerManager = { enabled = true }
-      kubeScheduler         = { enabled = true }
-      kubeProxy             = { enabled = true }
-      kubeEtcd              = { enabled = true }
-      nodeExporter          = { enabled = true }
-      kubeStateMetrics      = { enabled = true }
+      # En EKS los componentes de control-plane NO están como pods accesibles
+      kubeControllerManager = { enabled = false }
+      kubeScheduler         = { enabled = false }
+      kubeProxy             = { enabled = false }
+      kubeEtcd              = { enabled = false }
+
+      # Reglas por defecto OK; si deshabilitás etcd arriba, podés evitar sus rules
+      defaultRules = {
+        rules = {
+          etcd = false
+        }
+      }
     })
   ]
 }
