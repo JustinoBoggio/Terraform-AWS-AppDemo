@@ -149,7 +149,7 @@ resource "aws_iam_role_policy_attachment" "gha_app_eks_attach" {
 
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "20.24.1" # fíjalo; luego bump controlado
+  version = "21.2.0" # fíjalo; luego bump controlado
 
   cluster_name    = "dev-eks"
   cluster_version = "1.31"
