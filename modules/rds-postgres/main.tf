@@ -17,7 +17,7 @@ resource "aws_security_group" "db" {
   tags        = var.tags
 }
 
-# Allow inbound 5432 desde los SGs permitidos (node SG de EKS)
+# Allow inbound 5432 from SGs allowed (node SG of EKS)
 resource "aws_security_group_rule" "inbound_pg" {
   type                     = "ingress"
   from_port                = 5432
@@ -47,7 +47,7 @@ resource "aws_db_instance" "this" {
   instance_class              = var.instance_class
   allocated_storage           = var.allocated_storage_gb
   storage_type                = "gp3"
-  storage_encrypted           = true                   # KMS administrado por AWS (sin CMK)
+  storage_encrypted           = true                   # Managed KMS
   db_subnet_group_name        = aws_db_subnet_group.this.name
   vpc_security_group_ids      = [aws_security_group.db.id]
   multi_az                    = false

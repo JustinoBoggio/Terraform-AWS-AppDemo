@@ -2,7 +2,7 @@ import client from "prom-client";
 
 export const register = new client.Registry();
 
-// Métricas “default” de proceso/node
+// "default" metrics (CPU, memory, event loop, etc)
 client.collectDefaultMetrics({ register });
 
 // HTTP: latencia por método/ruta/código
@@ -14,7 +14,7 @@ export const httpDuration = new client.Histogram({
 });
 register.registerMetric(httpDuration);
 
-// DB: duración por operación (select/insert/…)
+// DB: duration by operation (select/insert/…)
 export const dbDuration = new client.Histogram({
   name: "db_query_duration_seconds",
   help: "DB query duration",
@@ -23,7 +23,7 @@ export const dbDuration = new client.Histogram({
 });
 register.registerMetric(dbDuration);
 
-// S3: duración por operación (PutObject/GetObject/ListObjectsV2)
+// S3: duration by operation (PutObject/GetObject/ListObjectsV2)
 export const s3Duration = new client.Histogram({
   name: "s3_operation_duration_seconds",
   help: "S3 operation duration",
@@ -32,7 +32,7 @@ export const s3Duration = new client.Histogram({
 });
 register.registerMetric(s3Duration);
 
-// Middleware que mide TODA request HTTP
+// Middleware that measures each HTTP request
 export function metricsMiddleware(req, res, next) {
   const end = httpDuration.startTimer({ method: req.method });
   res.on("finish", () => {
@@ -45,7 +45,7 @@ export function metricsMiddleware(req, res, next) {
   next();
 }
 
-// Helper para medir funciones async (DB/S3)
+// Helper to measure functions (DB/S3)
 export async function timeIt(hist, labels, fn) {
   const end = hist.startTimer(labels);
   try {

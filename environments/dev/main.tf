@@ -1,3 +1,8 @@
+data "aws_caller_identity" "current" {}
+
+# ---------------------------------------------------------
+# NETWORKING (VPC)
+# ---------------------------------------------------------
 module "vpc" {
   source = "../../modules/vpc"
 
@@ -9,7 +14,7 @@ module "vpc" {
   private_subnets = ["10.1.11.0/24", "10.1.12.0/24"]
 
   enable_nat_gateway = true
-  single_nat_gateway = true # costo mínimo
+  single_nat_gateway = true # Cost optimized for dev environment
 
   tags = {
     Project = "justino-devops-lab"
@@ -18,6 +23,9 @@ module "vpc" {
   }
 }
 
+# ---------------------------------------------------------
+# IDENTITY & SECURITY (OIDC)
+# ---------------------------------------------------------
 module "iam_oidc_github" {
   source = "../../modules/iam-oidc-github"
 
@@ -26,23 +34,23 @@ module "iam_oidc_github" {
   github_owner = "JustinoBoggio"
   github_repo  = "Terraform-AWS-AppDemo"
 
-  # Permitimos plan en PRs y apply en main
+  # Allow Plan on PRs and Apply on Main
   allowed_refs = [
-    "refs/heads/main",               # push / workflow_dispatch en main
-    "refs/heads/*",                  # ramas feature/*
-    "refs/pull/*/merge",             # PR común
-    "refs/pull/*/head",              # PR con head (algunas acciones)
-    "refs/tags/*",                   # releases
-    "environment:dev",               # entorno dev en main                          
-    "refs/heads/gh-readonly-queue/*" # merge queue (si lo usás)
+    "refs/heads/main",             # Push/Dispatch to main
+    "refs/heads/*",                # Feature branches
+    "refs/pull/*/merge",           # Standard PR merge ref
+    "refs/pull/*/head",            # Standard PR head ref
+    "refs/tags/*",                 # Releases
+    "environment:dev"              # Github Environment
   ]
 
   role_name = "gha-terraform-dev"
-  # Por ahora, para acelerar dev, usamos PowerUserAccess. Luego endurecemos.
+  
+  # Using broad permissions for the lab. In prod, scope this down.
   policy_arns = [
     "arn:aws:iam::aws:policy/PowerUserAccess",
     "arn:aws:iam::aws:policy/IAMReadOnlyAccess",
-    "arn:aws:iam::aws:policy/IAMFullAccess" # <- temporal para crear roles/adjuntar policies/PassRole
+    "arn:aws:iam::aws:policy/IAMFullAccess" 
   ]
 
   tags = {
@@ -52,6 +60,9 @@ module "iam_oidc_github" {
   }
 }
 
+# ---------------------------------------------------------
+# CONTAINER REGISTRY (ECR)
+# ---------------------------------------------------------
 module "ecr" {
   source = "../../modules/ecr"
 
@@ -67,37 +78,18 @@ module "ecr" {
   }
 }
 
+# ---------------------------------------------------------
+# IAM POLICIES FOR CI/CD
+# ---------------------------------------------------------
 
-# Role OIDC para la app (build/push)
-module "iam_oidc_github_app" {
-  source          = "../../modules/iam-oidc-github"
-  create_provider = false
-
-  github_owner = "JustinoBoggio"
-  github_repo  = "Terraform-AWS-AppDemo"
-  allowed_refs = ["refs/heads/main", "refs/tags/*"]
-  role_name    = "gha-app-dev"
-
-  policy_arns = [] # la policy la adjuntamos abajo
-  tags = {
-    Project     = "devops-lab"
-    Environment = "dev"
-    Owner       = "justino"
-  }
-}
-
-data "aws_caller_identity" "this" {}
-
-# Policy mínima para ECR push/pull estricta a TUS repos del módulo ecr
+# Policy: ECR Push/Pull scoped to specific repos
 data "aws_iam_policy_document" "ecr_push_min" {
-  # Necesario para login a ECR
   statement {
     effect    = "Allow"
     actions   = ["ecr:GetAuthorizationToken"]
     resources = ["*"]
   }
 
-  # Push/Pull sobre tus repositorios concretos
   statement {
     effect = "Allow"
     actions = [
@@ -123,11 +115,7 @@ resource "aws_iam_policy" "ecr_push_min" {
   policy = data.aws_iam_policy_document.ecr_push_min.json
 }
 
-resource "aws_iam_role_policy_attachment" "gha_app_ecr_attach" {
-  role       = module.iam_oidc_github_app.role_name
-  policy_arn = aws_iam_policy.ecr_push_min.arn
-}
-
+# Policy: EKS Describe
 data "aws_iam_policy_document" "eks_describe_cluster" {
   statement {
     effect    = "Allow"
@@ -141,33 +129,27 @@ resource "aws_iam_policy" "eks_describe_cluster" {
   policy = data.aws_iam_policy_document.eks_describe_cluster.json
 }
 
-resource "aws_iam_role_policy_attachment" "gha_app_eks_attach" {
-  role       = module.iam_oidc_github_app.role_name
-  policy_arn = aws_iam_policy.eks_describe_cluster.arn
-}
-
-
+# ---------------------------------------------------------
+# COMPUTE (EKS CLUSTER)
+# ---------------------------------------------------------
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "20.24.1" # fíjalo; luego bump controlado
+  version = "20.24.1" 
 
   cluster_name    = "dev-eks"
   cluster_version = "1.31"
 
-  # Networking (de tu módulo VPC)
   vpc_id     = module.vpc.vpc_id
   subnet_ids = concat(module.vpc.private_subnet_ids, module.vpc.public_subnet_ids)
 
   cluster_endpoint_public_access       = true
   cluster_endpoint_private_access      = false
-  cluster_endpoint_public_access_cidrs = ["0.0.0.0/0"] # en dev; luego tu IP /32
+  cluster_endpoint_public_access_cidrs = ["0.0.0.0/0"] 
 
   enable_irsa = true
 
-  # Logs de control plane (baratos y útiles)
   cluster_enabled_log_types = ["api", "audit", "authenticator"]
 
-  # asegura add-ons al último parche tras el upgrade
   cluster_addons = {
     coredns    = { most_recent = true }
     kube-proxy = { most_recent = true }
@@ -182,7 +164,7 @@ module "eks" {
     }
   }
 
-  # Node group Spot barato (t3.small). Ajusta a ARM si te conviene (t4g.small)
+  # Node Group (Spot Instances for Cost Optimization)
   eks_managed_node_groups = {
     dev = {
       instance_types = ["t3.small"]
@@ -202,23 +184,12 @@ module "eks" {
       }
     }
   }
+
+  # Cluster Access (RBAC)
   access_entries = {
-    gha-app = {
-      principal_arn = module.iam_oidc_github_app.role_arn
-
-      # Otorga permisos de admin a nivel CLUSTER
-      policy_associations = {
-        admin = {
-          policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
-          access_scope = {
-            type = "cluster"
-          }
-        }
-      }
-    }
-
-    tf-admin = {
-      principal_arn = "arn:aws:iam::215873709989:user/tf-admin"
+    tf_admin = {
+      # Replaced hardcoded ID with dynamic account ID
+      principal_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:user/tf-admin"
       policy_associations = {
         admin = {
           policy_arn   = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
@@ -235,11 +206,14 @@ module "eks" {
   }
 }
 
+# ---------------------------------------------------------
+# DATA (RDS & S3)
+# ---------------------------------------------------------
 module "s3_app" {
   source = "../../modules/s3-app-bucket"
 
-  name          = "justi-app-dev-${data.aws_caller_identity.this.account_id}"
-  force_destroy = true # dev: para poder destruir sin vaciar a mano
+  name          = "justi-app-dev-${data.aws_caller_identity.current.account_id}"
+  force_destroy = true 
   versioning    = true
 
   tags = {
@@ -271,6 +245,7 @@ module "rds_postgres" {
   }
 }
 
+# Store DB Credentials in Secrets Manager
 resource "aws_secretsmanager_secret" "db" {
   name = "dev/app/db"
   tags = {
@@ -289,77 +264,3 @@ resource "aws_secretsmanager_secret_version" "db" {
     password = module.rds_postgres.password
   })
 }
-
-module "irsa_app_api" {
-  source = "../../modules/iam-roles/api-irsa"
-
-  cluster_oidc_issuer_url = module.eks.cluster_oidc_issuer_url
-  oidc_provider_arn       = module.eks.oidc_provider_arn
-
-  k8s_namespace       = "app"
-  k8s_service_account = "app-api"
-
-  secretsmanager_arns = [aws_secretsmanager_secret.db.arn]
-  s3_bucket_arn       = module.s3_app.bucket_arn
-  s3_prefix           = ""
-
-  tags = {
-    Project     = "devops-lab"
-    Environment = "dev"
-    Owner       = "justino"
-  }
-}
-
-data "aws_caller_identity" "current" {}
-
-module "iam_irsa_eso" {
-  source = "../../modules/iam-roles/k8s-eso-irsa"
-
-  aws_region              = var.aws_region
-  cluster_oidc_issuer_url = module.eks.cluster_oidc_issuer_url
-  oidc_provider_arn       = module.eks.oidc_provider_arn
-
-  service_account_namespace = "external-secrets"
-  service_account_name      = "external-secrets"
-
-  allowed_secret_arns = [
-    "arn:aws:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:dev/app/db*"
-  ]
-
-  role_name = "eso-controller-dev"
-
-  tags = {
-    Project     = "devops-lab"
-    Environment = "dev"
-    Owner       = "justino"
-  }
-}
-
-# module "observability" {
-#   source = "../../modules/observability"
-
-#   providers = {
-#     kubernetes = kubernetes.eks
-#     helm       = helm.eks
-#   }
-
-#   enable_metrics_server        = true
-#   enable_kube_prometheus_stack = true
-#   namespace                    = "monitoring"
-
-#   grafana_enabled        = true
-#   grafana_admin_password = null # usa default del chart ("prom-operator"), o setea la tuya
-
-#   prometheus_retention = "3d"
-
-#   # ServiceMonitor para app-api
-#   app_api_service_monitor_enabled = true
-#   app_api_namespace               = "app"
-#   app_api_label_instance          = "app-api"
-#   app_api_label_name              = "app"
-#   app_api_metrics_port            = "http" # asegurate que tu Service tiene "name: http"
-#   app_api_metrics_path            = "/metrics"
-#   app_api_scrape_interval         = "30s"
-
-#   depends_on = [module.eks]
-# }

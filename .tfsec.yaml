@@ -1,2 +1,2 @@
 exclude_paths:
-  - .terraform/**        # excluye módulos vendorizados
+  - .terraform/**        # Vendor directory excluded

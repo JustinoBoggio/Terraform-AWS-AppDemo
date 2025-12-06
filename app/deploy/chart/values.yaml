@@ -18,7 +18,7 @@ resources:
     cpu: "200m"
     memory: "256Mi"
 
-# Por defecto, sin SA específico (cada release lo define)
+# Each release can set its own ServiceAccount
 serviceAccount:
   create: false
   name: ""
@@ -26,6 +26,6 @@ serviceAccount:
 pod:
   serviceAccountAnnotations: {}
 
-# Envs por defecto (vacíos)
+# Env by default is empty
 env: []
 secretEnv: []

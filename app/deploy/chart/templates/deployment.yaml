@@ -25,7 +25,7 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
-            - name: {{ default "http" .Values.service.portName }}     # <- NOMBRE DE PUERTO EN EL CONTENEDOR
+            - name: {{ default "http" .Values.service.portName }}
               containerPort: {{ .Values.service.targetPort }}
           {{- if or .Values.env .Values.secretEnv }}
           env:
@@ -45,7 +45,7 @@ spec:
           readinessProbe:
             httpGet:
               path: {{ .Values.probes.path | quote }}
-              port: {{ default "http" .Values.service.portName }}     # <- USA EL NOMBRE DEL PUERTO DEL CONTENEDOR
+              port: {{ default "http" .Values.service.portName }}
             initialDelaySeconds: {{ .Values.probes.initialDelaySeconds }}
             periodSeconds: {{ .Values.probes.periodSeconds }}
           livenessProbe:

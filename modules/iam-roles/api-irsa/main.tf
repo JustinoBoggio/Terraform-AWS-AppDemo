@@ -1,5 +1,5 @@
 locals {
-  clean_prefix  = trim(var.s3_prefix, "/")               # ej: "app"  o "" (raíz)
+  clean_prefix  = trim(var.s3_prefix, "/")               # ej: "app"  o "" (root)
   object_suffix  = local.clean_prefix != "" ? "/${local.clean_prefix}/*" : "/*"
   bucket_arn     = var.s3_bucket_arn
   objects_arn   = local.clean_prefix != "" ? "${var.s3_bucket_arn}/${local.clean_prefix}/*" : "${var.s3_bucket_arn}/*"
@@ -35,16 +35,16 @@ resource "aws_iam_role" "this" {
   tags               = var.tags
 }
 
-# Policy mínima SOLO S3 (la app NO lee Secrets Manager si usás ESO)
+# Minimal policy
 data "aws_iam_policy_document" "app" {
-  # ListBucket: solo bucket ARN
+  # ListBucket: only bucket ARN
   statement {
     sid     = "ListBucket"
     effect  = "Allow"
     actions = ["s3:ListBucket"]
     resources = [var.s3_bucket_arn]
   }
-  # RW en objetos: solo objetos bajo el prefijo
+  # RW in objects: bucket + prefix (or all objects if no prefix)
   statement {
     sid     = "RWObjects"
     effect  = "Allow"

@@ -22,7 +22,7 @@ env:
 
 jobs:
   apply:
-    environment: dev   # <- requiere aprobación en Settings → Environments
+    environment: dev
     runs-on: ubuntu-latest
     defaults:
       run:

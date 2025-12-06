@@ -21,7 +21,6 @@ variable "grafana_enabled" {
 variable "grafana_admin_password" {
   type    = string
   default = null
-  # si null, se usa el default del chart (suele ser "prom-operator")
 }
 
 variable "prometheus_retention" {

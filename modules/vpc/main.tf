@@ -25,7 +25,7 @@ resource "aws_subnet" "public" {
   })
 }
 
-# Subnets privadas (una por AZ)
+# Private subnets (one per AZ)
 resource "aws_subnet" "private" {
   for_each = { for idx, az in var.azs : idx => { az = az, cidr = var.private_subnets[idx] } }
 
@@ -39,7 +39,7 @@ resource "aws_subnet" "private" {
   })
 }
 
-# EIP para NAT (si corresponde)
+# EIP for NAT
 resource "aws_eip" "nat" {
   count = var.enable_nat_gateway ? (var.single_nat_gateway ? 1 : length(var.azs)) : 0
   domain = "vpc"
@@ -55,7 +55,7 @@ resource "aws_nat_gateway" "this" {
   depends_on    = [aws_internet_gateway.this]
 }
 
-# Route table pública + rutas
+# Public route table + routes
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.this.id
   tags   = merge(var.tags, { Name = "${var.name}-public-rt" })
@@ -67,37 +67,36 @@ resource "aws_route" "public_inet" {
   gateway_id             = aws_internet_gateway.this.id
 }
 
-# Asociaciones RT pública
+# Public RT associations
 resource "aws_route_table_association" "public_assoc" {
   for_each       = aws_subnet.public
   subnet_id      = each.value.id
   route_table_id = aws_route_table.public.id
 }
 
-# Route tables privadas (una por AZ si querés separar; acá 1 por AZ para claridad)
+# Private route tables (one per AZ)
 resource "aws_route_table" "private" {
   for_each = aws_subnet.private
   vpc_id   = aws_vpc.this.id
   tags     = merge(var.tags, { Name = "${var.name}-private-rt-${each.value.availability_zone}" })
 }
 
-# Ruta por NAT (si está habilitado)
+# Nat Route(s) for private RTs
 resource "aws_route" "private_out" {
   for_each = var.enable_nat_gateway ? aws_route_table.private : {}
   route_table_id         = each.value.id
   destination_cidr_block = "0.0.0.0/0"
   nat_gateway_id         = aws_nat_gateway.this[var.single_nat_gateway ? 0 : tonumber(regex("\\d+$", each.key))].id
-  # truco: usa 0 si single NAT, o índice por AZ si NAT por AZ
 }
 
-# Asociaciones RT privadas
+# Private RT associations
 resource "aws_route_table_association" "private_assoc" {
   for_each       = aws_subnet.private
   subnet_id      = each.value.id
   route_table_id = aws_route_table.private[each.key].id
 }
 
-# VPC Endpoints (gateway) GRATUITOS: S3 y DynamoDB
+# Free VPC Endpoints (gateway): S3 y DynamoDB
 resource "aws_vpc_endpoint" "s3" {
   vpc_id            = aws_vpc.this.id
   service_name      = "com.amazonaws.${data.aws_region.current.id}.s3"

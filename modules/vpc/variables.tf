@@ -11,7 +11,7 @@ variable "enable_nat_gateway" {
 variable "single_nat_gateway" { 
   type = bool  
   default = true 
-}   # 1 NAT para todo dev (barato)
+}
 
 variable "tags" {
   type    = map(string)
