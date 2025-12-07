@@ -13,13 +13,13 @@ spec:
   - name: app-api.rules
     interval: 30s
     rules:
-    # --- Recording: RPS y p95 (para que queries de alert sean livianas) ---
+    # --- Recording: RPS y p95 ---
     - record: app:http_requests:rate5m
       expr: sum by (route) (rate(http_request_duration_seconds_count{namespace="{{ .Release.Namespace }}"}[5m]))
     - record: app:http_request_p95_seconds
       expr: histogram_quantile(0.95, sum by (le, route) (rate(http_request_duration_seconds_bucket{namespace="{{ .Release.Namespace }}"}[5m])))
 
-    # --- Alert: Error rate >= X% (por ruta) ---
+    # --- Alert: Error rate >= X% ---
     - alert: AppHighErrorRate
       expr: |
         (sum by (route) (rate(http_request_duration_seconds_count{namespace="{{ .Release.Namespace }}",code=~"5.."}[5m]))

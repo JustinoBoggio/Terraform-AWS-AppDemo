@@ -18,7 +18,7 @@ variable "k8s_service_account" {
 
 variable "secretsmanager_arns" {
   type        = list(string)
-  description = "ARNs de secretos a los que dar lectura"
+  description = "ARNs of secrets in Secrets Manager to allow access to"
   default     = []
 }
 

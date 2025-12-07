@@ -20,7 +20,6 @@ prometheus:
       requests: { cpu: "150m", memory: "256Mi" }
       limits:   { cpu: "400m", memory: "512Mi" }
 
-# En EKS estos no aplican como Pods de usuario:
 kubeControllerManager: { enabled: false }
 kubeScheduler:         { enabled: false }
 kubeProxy:             { enabled: false }

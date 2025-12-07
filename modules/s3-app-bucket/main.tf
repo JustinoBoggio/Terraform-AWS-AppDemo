@@ -11,7 +11,7 @@ resource "aws_s3_bucket_versioning" "this" {
   }
 }
 
-# Bloquea cualquier acceso público por accidente
+# Block public access
 resource "aws_s3_bucket_public_access_block" "this" {
   bucket                  = aws_s3_bucket.this.id
   block_public_acls       = true
@@ -20,7 +20,7 @@ resource "aws_s3_bucket_public_access_block" "this" {
   restrict_public_buckets = true
 }
 
-# Cifrado en reposo con AWS-managed key (sin costo mensual, no CMK)
+# Standby cypher with AWS manged keys
 resource "aws_s3_bucket_server_side_encryption_configuration" "this" {
   bucket = aws_s3_bucket.this.id
   rule {
@@ -30,7 +30,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "this" {
   }
 }
 
-# Política: requiere TLS y niega ACLs públicas
+# Policy: require TLS and deny ACLs
 data "aws_iam_policy_document" "bucket_policy" {
   statement {
     sid     = "DenyInsecureTransport"

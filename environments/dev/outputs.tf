@@ -1,39 +1,24 @@
 output "gha_role_arn" {
-  description = "Role asumido por GitHub Actions"
+  description = "Role ARN assumed by GitHub Actions for Infra Provisioning"
   value       = module.iam_oidc_github.role_arn
 }
 
 output "ecr_repositories" {
-  description = "Repos ECR creados"
+  description = "Created ECR repository URLs"
   value       = module.ecr.repositories
 }
 
 output "gha_app_role_arn" {
-  description = "Role OIDC para build/push"
+  description = "Role ARN for application CI/CD (Build & Push)"
   value       = "arn:aws:iam::${data.aws_caller_identity.this.account_id}:role/gha-app-dev"
 }
 
-output "cluster_name" {
-  value = module.eks.cluster_name
-}
-output "cluster_endpoint" {
-  value = module.eks.cluster_endpoint
+output "eks_cluster_name" {
+  description = "Name of the EKS cluster"
+  value       = module.eks.cluster_name
 }
 
-output "IRSA_role_arn" {
-  description = "Role IRSA para la app API"
-  value       = module.irsa_app_api.role_arn
+output "eks_cluster_endpoint" {
+  description = "Endpoint for the EKS control plane"
+  value       = module.eks.cluster_endpoint
 }
-
-output "eso_role_arn" {
-  value = module.iam_irsa_eso.role_arn
-}
-
-
-# output "grafana_port_forward" {
-#   value = module.observability.grafana_port_forward
-# }
-
-# output "prometheus_url_hint" {
-#   value = module.observability.prometheus_url_hint
-# }

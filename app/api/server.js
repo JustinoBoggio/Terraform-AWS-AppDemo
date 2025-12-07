@@ -11,12 +11,12 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
-app.use(metricsMiddleware); // <— mide todas las requests
+app.use(metricsMiddleware); // <— measure all requests
 
 // ------- Configuración via env -------
-// DB: preferimos una DATABASE_URL (postgres://user:pass@host:5432/db?sslmode=require)
+// DB: We rather DATABASE_URL (postgres://user:pass@host:5432/db?sslmode=require)
 const DATABASE_URL = process.env.DATABASE_URL;
-// Si no usas URL, podés setear separados:
+
 // const DB_HOST = process.env.DB_HOST;
 // const DB_USER = process.env.DB_USER;
 // const DB_PASS = process.env.DB_PASS;
@@ -32,7 +32,7 @@ let pool;
 if (DATABASE_URL) {
   pool = new Pool({
     connectionString: DATABASE_URL,
-    // Para RDS suele requerirse SSL; en dev aceptamos cert por defecto
+    // Accept certs by default (for RDS/Aurora) DEV
     ssl: { rejectUnauthorized: false },
   });
 } else {
@@ -46,7 +46,7 @@ if (DATABASE_URL) {
   });
 }
 
-// Test de conexión al levantar
+// connection test
 pool.connect()
   .then(c => c.release())
   .then(() => console.log("✅ Connected to Postgres"))
@@ -64,7 +64,7 @@ const streamToString = (stream) =>
     stream.on("error", reject);
   });
 
-// ------- Rutas básicas -------
+// ------- Basics routes -------
 app.get("/api/ping", (req, res) => {
   res.json({ ok: true });
 });
@@ -77,7 +77,7 @@ app.get("/api/time", (req, res) => {
   res.json({ now: new Date().toISOString() });
 });
 
-// ------- Rutas DB -------
+// ------- DB Routes -------
 
 // Ping DB
 app.get("/api/db/ping", async (_req, res) => {
@@ -92,7 +92,7 @@ app.get("/api/db/ping", async (_req, res) => {
   }
 });
 
-// Init tabla simple
+// Init simple table
 app.post("/api/db/init", async (req, res) => {
   try {
     await pool.query(`
@@ -134,9 +134,9 @@ app.get("/api/db/users", async (req, res) => {
   }
 });
 
-// ------- Rutas S3 -------
+// ------- S3 Routes -------
 
-// PUT objeto de demo (texto)
+// PUT demo object (text)
 app.post("/api/s3/put", async (req, res) => {
   try {
     if (!S3_BUCKET) throw new Error("Missing env S3_BUCKET");
@@ -159,7 +159,7 @@ app.post("/api/s3/put", async (req, res) => {
   }
 });
 
-// GET objeto
+// GET object
 app.get("/api/s3/get", async (req, res) => {
   try {
     if (!S3_BUCKET) throw new Error("Missing env S3_BUCKET");
@@ -175,7 +175,7 @@ app.get("/api/s3/get", async (req, res) => {
   }
 });
 
-// LIST objetos (máx 50)
+// LIST objects (máx 50)
 app.get("/api/s3/list", async (req, res) => {
   try {
     if (!S3_BUCKET) throw new Error("Missing env S3_BUCKET");
@@ -197,12 +197,12 @@ app.listen(PORT, () => {
 });
 
 
-// endpoint de salud
+// Health endpoint
 app.get("/api/healthz", (_req, res) => {
   res.status(200).send("ok");
 });
 
-// endpoint de métricas
+// Metrics endpoint
 app.get("/metrics", async (_req, res) => {
   res.set("Content-Type", register.contentType);
   res.end(await register.metrics());

@@ -30,7 +30,7 @@ data "aws_iam_policy_document" "eso_trust" {
   }
 }
 
-# Política mínima para Secrets Manager (ajusta el alcance según tu preferencia)
+# Minimal policy for Secret manager access
 data "aws_iam_policy_document" "eso" {
   statement {
     sid     = "DescribeList"

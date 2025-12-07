@@ -5,12 +5,13 @@ locals {
   table_name  = "${var.project_prefix}-tf-lock"
 }
 
+# S3 Bucket for Remote State
 resource "aws_s3_bucket" "state" {
   bucket        = local.bucket_name
   force_destroy = var.force_destroy
 }
 
-# Bloqueo total de acceso público
+# Block Public Access (Security Best Practice)
 resource "aws_s3_bucket_public_access_block" "state" {
   bucket                  = aws_s3_bucket.state.id
   block_public_acls       = true
@@ -19,7 +20,7 @@ resource "aws_s3_bucket_public_access_block" "state" {
   restrict_public_buckets = true
 }
 
-# Versionado para el tfstate
+# Enable Versioning for State Recovery
 resource "aws_s3_bucket_versioning" "state" {
   bucket = aws_s3_bucket.state.id
   versioning_configuration {
@@ -27,26 +28,24 @@ resource "aws_s3_bucket_versioning" "state" {
   }
 }
 
-# Encriptación por defecto (SSE-S3) → SIN costo mensual fijo
+# Default Encryption (SSE-S3) - Cost Optimized
 resource "aws_s3_bucket_server_side_encryption_configuration" "state" {
   bucket = aws_s3_bucket.state.id
   rule {
     apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256" # si luego querés KMS: usa aws:kms + KMS key
+      sse_algorithm = "AES256"
     }
     bucket_key_enabled = true
   }
 }
 
-# Lifecycle para no acumular versiones viejas = ahorrar $
+# Lifecycle Policy to expire old state versions
 resource "aws_s3_bucket_lifecycle_configuration" "state" {
   bucket = aws_s3_bucket.state.id
 
   rule {
     id     = "expire-noncurrent"
     status = "Enabled"
-
-    # Aplica a TODO el bucket (requerido por el provider 5.x)
     filter {}
 
     noncurrent_version_expiration {
@@ -55,7 +54,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "state" {
   }
 }
 
-# DynamoDB lock table (baratísimo en on-demand)
+# DynamoDB Table for State Locking
 resource "aws_dynamodb_table" "lock" {
   name         = local.table_name
   billing_mode = "PAY_PER_REQUEST"

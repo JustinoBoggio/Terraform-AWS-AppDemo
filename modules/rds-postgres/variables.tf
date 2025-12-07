@@ -20,7 +20,7 @@ variable "allocated_storage_gb" {
 
 variable "subnet_ids" {
   type        = list(string)
-  description = "Private subnet IDs para el DB subnet group"
+  description = "Private subnet IDs for the DB subnet group"
 }
 
 variable "vpc_id" {
@@ -29,7 +29,7 @@ variable "vpc_id" {
 
 variable "allowed_sg_ids" {
   type        = list(string)
-  description = "Security Group IDs autorizados a acceder (ej: node SG de EKS)"
+  description = "Security Group IDs allowed to access the DB (e.g., EKS node SG)"
 }
 
 variable "backup_retention_days" {

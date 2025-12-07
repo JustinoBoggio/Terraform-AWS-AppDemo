@@ -1,6 +1,6 @@
 variable "name" {
   type        = string
-  description = "Nombre del bucket S3"
+  description = "S3 bucket name"
 }
 
 variable "force_destroy" {

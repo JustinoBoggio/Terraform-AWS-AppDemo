@@ -24,7 +24,7 @@ resource "aws_ecr_repository" "this" {
   }
 
   encryption_configuration {
-    encryption_type = "AES256" # sin KMS para no sumar costos
+    encryption_type = "AES256"
   }
 
   tags = var.tags

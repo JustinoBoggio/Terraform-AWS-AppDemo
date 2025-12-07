@@ -1,19 +1,19 @@
 import { useEffect, useState } from "react";
 
-// Une base + path sin duplicar ni perder slashes
+// join base and path ensuring single slash between them
 const joinApi = (base, path = "") =>
   `${String(base).replace(/\/+$/, "")}/${String(path).replace(/^\/+/, "")}`;
 
 export default function App() {
-  // default sin barra final
+  // without trailing slash by default
   const [apiUrl, setApiUrl] = useState("/api");
   const [hello, setHello] = useState("");
   const [time, setTime] = useState("");
 
   useEffect(() => {
-    // lee config generada en runtime por entrypoint.sh
+    // Read config from global variable set in config.js
     const cfg = window.__APP_CONFIG__ || {};
-    // normaliza (sin slash final)
+    // normalize URL (without trailing slash)
     setApiUrl(String(cfg.API_URL || "/api").replace(/\/+$/, ""));
   }, []);
 

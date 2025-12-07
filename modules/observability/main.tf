@@ -1,4 +1,4 @@
-# Namespace para observabilidad
+# Namespace for observability components
 resource "kubernetes_namespace" "this" {
   metadata {
     name = var.namespace
@@ -8,7 +8,7 @@ resource "kubernetes_namespace" "this" {
   }
 }
 
-# ---- metrics-server (barato, necesario para HPA/kubectl top) ----
+# ---- metrics-server ----
 resource "helm_release" "metrics_server" {
   count            = var.enable_metrics_server ? 1 : 0
   name             = "metrics-server"
@@ -34,10 +34,9 @@ resource "helm_release" "kps" {
   create_namespace = false
   depends_on       = [kubernetes_namespace.this]
 
-  # Para evitar estados “failed” colgados y esperas cortas
-  atomic          = true           # si falla, desinstala
+  atomic          = true           
   cleanup_on_fail = true
-  timeout         = 1200           # 20 min para CRDs y operator
+  timeout         = 1200
   wait            = true
   dependency_update = true
   values = [
@@ -77,7 +76,7 @@ resource "helm_release" "kps" {
           }
         }
 
-        # ServiceMonitor para tu API (solo si lo habilitaste por var)
+        # ServiceMonitor for the API app
         additionalServiceMonitors = var.app_api_service_monitor_enabled ? [
           {
             name = "app-api"
@@ -101,13 +100,13 @@ resource "helm_release" "kps" {
         ] : []
       }
 
-      # En EKS los componentes de control-plane NO están como pods accesibles
+      # In EKS the components below can be disabled to reduce resource usage
       kubeControllerManager = { enabled = false }
       kubeScheduler         = { enabled = false }
       kubeProxy             = { enabled = false }
       kubeEtcd              = { enabled = false }
 
-      # Reglas por defecto OK; si deshabilitás etcd arriba, podés evitar sus rules
+      # Default rules OK because of disabled above components
       defaultRules = {
         rules = {
           etcd = false
