@@ -134,7 +134,7 @@ resource "aws_iam_policy" "eks_describe_cluster" {
 # ---------------------------------------------------------
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "20.24.1" 
+  version = "21.10.1" 
 
   cluster_name    = "dev-eks"
   cluster_version = "1.31"
