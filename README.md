@@ -15,35 +15,7 @@ This repository serves as a catalog of advanced Terraform patterns for AWS, focu
 
 The solution implements a scalable 3-tier architecture following the **AWS Well-Architected Framework**.
 
-```mermaid
-graph TD
-    User((Internet User)) -->|HTTPS| ALB[App Load Balancer]
-    
-    subgraph "AWS Region: us-east-1 (VPC)"
-        subgraph "Public Subnets"
-            NAT[NAT Gateway]
-            ALB
-        end
-        
-        subgraph "Private Subnets"
-            EKS_CP[EKS Control Plane]
-            Nodes[Managed Node Groups]
-            RDS[RDS PostgreSQL]
-        end
-    end
-    
-    subgraph "External Services"
-        GitHub[GitHub Actions]
-        ECR[Elastic Container Registry]
-    end
-
-    %% Connections
-    GitHub -.->|OIDC Auth (No Keys)| AWS_IAM[AWS IAM]
-    AWS_IAM -->|Assume Role| EKS_CP
-    Nodes -->|Pull Images| ECR
-    Nodes -->|Private Traffic| RDS
-    Nodes -->|Outbound Traffic| NAT
-```
+![AWS Architecture](./assets/architecture-diagram-aws.png)
 
 ---
 
