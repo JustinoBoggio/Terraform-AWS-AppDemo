@@ -1,6 +1,6 @@
 # 🏛️ AWS EKS Modular Infrastructure (Reference Architecture)
 
-![Terraform](https://img.shields.io/badge/Terraform-1.5+-purple?style=flat&logo=terraform)
+![Terraform](https://img.shields.io/badge/Terraform-1.9-purple?style=flat&logo=terraform)
 ![AWS](https://img.shields.io/badge/AWS-EKS-orange?style=flat&logo=amazon-aws)
 ![CI/CD](https://img.shields.io/badge/GitHub_Actions-OIDC-blue?style=flat&logo=github-actions)
 ![Status](https://img.shields.io/badge/Status-Reference_Architecture-grey)
